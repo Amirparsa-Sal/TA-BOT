@@ -10,3 +10,13 @@ class NoOtpException(APIException):
     status_code = 400
     default_detail = 'You have not requested an otp yet!'
     default_code = 'bad_request'
+
+class InvalidSecretKey(APIException):
+    status_code = 400
+    default_detail = 'Entered secret is not correct!'
+    default_code = 'bad_request'
+
+class OtpMismatchException(APIException):
+    status_code = 400
+    default_detail = 'Otp is not correct!'
+    default_code = 'bad_request'

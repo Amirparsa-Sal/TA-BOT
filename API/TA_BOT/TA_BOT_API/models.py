@@ -13,23 +13,21 @@ class AuthData(models.Model):
 
 class UserManager(BaseUserManager):
 
-    def create_user(self, email, chat_id, first_name, last_name, password):
+    def create_user(self, email, first_name, last_name, password, student_id=None):
         if not email:
             raise ValueError('Users must have an email address.')
         if not password:
             raise ValueError('Users must have a password.')
 
         email = self.normalize_email(email)
-        user = self.model(email=email,first_name=first_name, last_name=last_name)
+        user = self.model(email=email,first_name=first_name, last_name=last_name, student_id=student_id)
         user.set_password(password)
         
-        user.chat_id = chat_id
-
         user.save(using=self._db)
         return user
 
-    def create_superuser(self,email, chat_id, password, first_name=None, last_name=None):
-        user = self.create_user(email, chat_id, first_name, last_name, password)
+    def create_superuser(self,email, password, first_name=None, last_name=None):
+        user = self.create_user(email, first_name, last_name, password)
 
         user.is_active = True
         user.is_superuser = True
@@ -38,9 +36,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-
 class User(AbstractBaseUser, PermissionsMixin):
-    chat_id = models.BigIntegerField(null=False) #Username Field for admin and students
     student_id = models.CharField(validators=[MinLengthValidator(8)], max_length=8, null=True)
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=255, null=True)
@@ -53,3 +49,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
+
+class TelegramActiveSessions(models.Model):
+    chat_id = models.BigIntegerField(null=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='active_sessions')
+    

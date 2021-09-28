@@ -5,7 +5,6 @@ from django.core.validators import MinLengthValidator,MaxLengthValidator,Decimal
 class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
     email = serializers.EmailField()
-    chat_id = serializers.IntegerField()
 
     def validate(self, attrs):
         '''Check if the student_id is valid.'''
@@ -15,5 +14,10 @@ class UserRegisterSerializer(serializers.Serializer):
 
 class AccountActivitionSerializer(serializers.Serializer):
     '''A serializer to get inputs of acccount activision api. It recieves chat_id and otp as inputs.'''
-    chat_id = serializers.IntegerField()
+    email = serializers.EmailField()
     otp = serializers.CharField(validators=[validate_integer, MinLengthValidator(5), MaxLengthValidator(5)])
+
+class AdminRegisterSerializer(serializers.Serializer):
+    '''This is a serializer for admin registeration. it recieves email,chat_id and secret key as inputs.'''
+    email = serializers.EmailField()
+    secret = serializers.CharField()

@@ -36,14 +36,15 @@ ALLOWED_HOSTS = ['localhost', env('SERVER_HOST'), '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
+    'TA_BOT_API',
+    'rest_framework',
+    'rest_framework.authtoken',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
-    'TA_BOT_API'
 ]
 
 MIDDLEWARE = [
@@ -142,3 +143,7 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 REDIS_HOST = 'localhost'
 REDIS_PORT = 6379
+
+AUTHENTICATION_BACKENDS = [
+    'TA_BOT_API.backends.AuthenticationBackend',
+]
