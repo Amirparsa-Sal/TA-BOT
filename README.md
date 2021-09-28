@@ -1,0 +1,1 @@
+This is a taching assistant bot for the Fundamentals of Programming course at AUT.
