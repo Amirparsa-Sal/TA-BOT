@@ -38,19 +38,19 @@ class AuthView(ViewSet):
             email = seri.validated_data.get('email')
 
             # Checking if the email already exsits in redis keys
-            otp = redis_instance.get(email)
+            otp = redis_instance.get(email.lower())
 
             if otp is None:
                 # Checking if the user has registered before
                 try:
-                    user = user_model.objects.get(email=email)
+                    user = user_model.objects.get(email__iexact=email)
                     # Checking if user has activated his/her account already
                     if user.is_active:
                         raise UserAlreadyExistsException('A user with this email already exists!')
-                except:
+                except user_model.DoesNotExist:
                     # Create a new user if user does not exist
                     try:
-                        auth_data = AuthData.objects.get(email=email)
+                        auth_data = AuthData.objects.get(email__iexact=email)
                         print(auth_data.student_id)
                         user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.student_id, student_id=auth_data.student_id)
                     except AuthData.DoesNotExist:
@@ -58,7 +58,7 @@ class AuthView(ViewSet):
             
             # Create OTP and save in redis
             otp = get_random_string(length=5, allowed_chars='0123456789')
-            redis_instance.set(name=email, value=otp, ex= 60 * 5)
+            redis_instance.set(name=email.lower(), value=otp, ex= 60 * 5)
             
             # Send OTP via email
             try:    
@@ -90,9 +90,12 @@ class AuthView(ViewSet):
                 raise OtpMismatchException('Otp is not correct!')
 
             # Activate account
-            user = user_model.objects.get(email=email)
+            user = user_model.objects.get(email__iexact=email)
             user.is_active = True
             user.save()
+
+            # Delete from reddit
+            redis_instance.delete(email)
             
             return Response(data={}, status=status.HTTP_200_OK)
 
@@ -108,7 +111,7 @@ class AuthView(ViewSet):
                 raise InvalidSecretKey(detail='The entered secret key is incorrect.')
             
             try:
-                user_model.objects.get(email=email)
+                user_model.objects.get(email__iexact=email)
                 raise UserAlreadyExistsException(detail='A user with this email already exists!')
             except user_model.DoesNotExist:
                 user_model.objects.create_superuser(email, secret)

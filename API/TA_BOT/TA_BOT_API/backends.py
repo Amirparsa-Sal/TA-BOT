@@ -14,7 +14,7 @@ class AuthenticationBackend(ModelBackend):
 
     def authenticate(self, request, username=None, password=None, **kwargs):
         try:
-            user = user_model.objects.get(email=username)
+            user = user_model.objects.get(email__iexact=username)
             print(user)
             if user.check_password(password):
                 chat_id = request.data.get('chat_id')

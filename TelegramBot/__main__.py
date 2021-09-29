@@ -1,8 +1,12 @@
+from os import stat
+from rest_framework import response
 import telegram
+from telegram import chat
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 import logging
 import environ
 import re
+from request_util import ApiUrls,post,post_with_auth
 
 # Create a .env file inside the folder containing a variable named BOT_TOKEN and the value of access token.
 env = environ.Env()
@@ -42,20 +46,31 @@ def login(update: telegram.Update, context: telegram.ext.CallbackContext):
     return LOGIN_ENTER_EMAIL
 
 def register_enter_email(update: telegram.Update, context: telegram.ext.CallbackContext):
+    # Check if the email is AUT email
     if re.fullmatch(AUT_EMAIL_REGEX, update.message.text):
-        context.user_data['email'] = update.message.txt #Saving the email to use it in next request
-        #TODO: Sent the otp
-        update.message.reply_text(text=f'Otp sent to {update.message.text}. Please enter the otp:')
-        return REGISTER_ENTER_OTP
+        context.user_data['email'] = update.message.text #Saving the email to use it in next request
+        #Send the otp
+        update.message.reply_text(text='Please wait...')
+        response, status = post(ApiUrls.SEND_OTP.value, email=update.message.text)
+        if status == 200:
+            update.message.reply_text(text=f'Otp sent to {update.message.text}. Please enter the otp:')
+            return REGISTER_ENTER_OTP
+        update.message.reply_text(text=response['detail'])
+        return REGISTER_ENTER_EMAIL
     update.message.reply_text(text='This is not an AUT email dude! Please re enter your email!')
     return REGISTER_ENTER_EMAIL
 
 def register_enter_otp(update: telegram.Update, context: telegram.ext.CallbackContext):
+    # Check if the otp is valid
     if re.fullmatch(OTP_REGEX, update.message.text):
         email = context.user_data['email']
-        #TODO: Check the otp correctness given the email and otp
-        update.message.reply_text(text='Register completed!')
-        return ConversationHandler.END
+        #Check the otp correctness given the email and otp
+        response, status = post(ApiUrls.ACTIVATE_ACCOUNT.value, email=email, otp=update.message.text)
+        if status == 200:
+            update.message.reply_text(text='Register completed!')
+            return ConversationHandler.END
+        update.message.reply_text(text=response['detail'])
+        return REGISTER_ENTER_OTP
     update.message.reply_text(text='The OTP format is not correct. it must be a 5 digit number.')
     return REGISTER_ENTER_OTP
 
@@ -69,8 +84,15 @@ def login_enter_email(update: telegram.Update, context: telegram.ext.CallbackCon
 
 def login_enter_password(update: telegram.Update, context: telegram.ext.CallbackContext):
     #TODO: Send the login request with given password and email and check if the status code is ok
-    update.message.reply_text(text='Logged in successfully!')
-    return ConversationHandler.END
+    email = context.user_data['email']
+    response, status = post(ApiUrls.LOGIN.value, username=email, password=update.message.text, chat_id=update.effective_chat.id)
+    if status == 200:
+        update.message.reply_text(text='Logged in successfully!')
+        context.user_data['token'] = response['token']
+        return ConversationHandler.END
+    update.message.reply_text(text='email or password is not correct. Please enter your email again!')
+    return LOGIN_ENTER_EMAIL
+        
 
 def cancel(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='Operation Canceled!')
