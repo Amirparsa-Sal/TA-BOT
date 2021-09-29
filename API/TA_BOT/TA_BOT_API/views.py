@@ -3,13 +3,16 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
+import requests
 
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import APIException, NotFound, ValidationError
+from telegram import chat
 
-from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer
+from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, LogoutSerializer
 from .models import AuthData
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
@@ -32,6 +35,8 @@ class LoginApiView(ObtainAuthToken):
 
 class AuthView(ViewSet):
 
+    authentication_classes = [TokenAuthentication]
+    
     def register_user(self, request):
         seri = UserRegisterSerializer(data=request.data)
         if seri.is_valid():
@@ -115,6 +120,19 @@ class AuthView(ViewSet):
                 raise UserAlreadyExistsException(detail='A user with this email already exists!')
             except user_model.DoesNotExist:
                 user_model.objects.create_superuser(email, secret)
+
+            return Response(data={}, status=status.HTTP_200_OK) 
+        
+        raise ValidationError(detail='The data is not valid!')
+
+    def logout(self, request):
+        seri = LogoutSerializer(data=request.data)
+        if seri.is_valid():
+            chat_id = seri.validated_data.get('chat_id')
+            
+            # Delete chat_id from user sessions
+            user = request.user
+            user.active_sessions.filter(chat_id=chat_id).delete()
 
             return Response(data={}, status=status.HTTP_200_OK) 
         

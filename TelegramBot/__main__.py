@@ -6,7 +6,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 import logging
 import environ
 import re
-from request_util import ApiUrls,post,post_with_auth
+from request_util import ApiUrls, post, post_with_auth
 
 # Create a .env file inside the folder containing a variable named BOT_TOKEN and the value of access token.
 env = environ.Env()
@@ -34,6 +34,28 @@ SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
 AUT_EMAIL_REGEX = '^[A-Za-z0-9._%+-]+@aut\.ac\.ir'
 OTP_REGEX = '^[0-9]{5}'
 
+# A decorator to use in functions that user needs to be authorized before
+def is_authorized(func):
+
+    def wrapper_func(update, context, **kwargs):
+        if 'token' in context.user_data.keys():
+            return func(update,context,**kwargs)
+        else:
+            update.message.reply_text('You are not logged in yet! Use /login command!')
+
+    return wrapper_func
+
+# A decorator to use in functions that user needs to log out before
+def not_authorized(func):
+    
+    def wrapper_func(update, context, **kwargs):
+        if 'token' not in context.user_data.keys():
+            return func(update,context,**kwargs)
+        else:
+            update.message.reply_text('You must /logout before this operation')
+
+    return wrapper_func
+
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='Hi! Use /Register or /Login to start using the bot.')
     return ConversationHandler.END
@@ -42,6 +64,7 @@ def register(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='We are in register section. You can use /cancel to cancel the operation in each section.\n Now, Please enter your AUT email!')
     return REGISTER_ENTER_EMAIL
 
+@not_authorized
 def login(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='We are in login section. You can use /cancel to cancel the operation in each section.\n Now, Please enter your email!')
     return LOGIN_ENTER_EMAIL
@@ -118,6 +141,17 @@ def cancel(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='Operation Canceled!')
     return ConversationHandler.END
 
+@is_authorized
+def logout(update: telegram.Update, context: telegram.ext.CallbackContext):
+    token = context.user_data['token']
+    chat_id = update.effective_chat.id
+    response,status = post_with_auth(ApiUrls.LOGOUT.value, token, chat_id=chat_id)
+    if status != 200:
+        update.message.reply_text(text='Oops! Something went wrong!')
+    else:
+        del context.user_data['token']
+        update.message.reply_text(text='You logged out successfully!')
+
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), CommandHandler('register', register), CommandHandler('login', login), \
                       CommandHandler('register_admin', register_admin)],
@@ -139,6 +173,9 @@ conv_handler = ConversationHandler(
         allow_reentry=True
     )
 
+logout_handler = CommandHandler('logout', logout)
+
 dispatcher = updater.dispatcher
 dispatcher.add_handler(conv_handler)
+dispatcher.add_handler(logout_handler)
 updater.start_polling()

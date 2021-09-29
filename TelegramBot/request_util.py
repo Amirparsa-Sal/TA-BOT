@@ -11,6 +11,7 @@ class ApiUrls(Enum):
     ACTIVATE_ACCOUNT = AUTH_BASE + 'activate-account/'
     REGISTER_ADMIN = AUTH_BASE + 'register-admin/'
     LOGIN = AUTH_BASE + 'login/'
+    LOGOUT = AUTH_BASE + 'logout/'
 
 def post(url, **kwargs):
     # Creating response body
