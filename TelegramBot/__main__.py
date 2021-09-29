@@ -26,7 +26,8 @@ updater = Updater(token=TOKEN, use_context=True)
 bot = telegram.Bot(TOKEN)
 
 # Defining states
-REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWORD = range(4)
+REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWORD, \
+REGISTER_ADMIN_ENTER_EMAIL, REGISTER_ADMIN_ENTER_SECRET = range(6)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
@@ -44,6 +45,10 @@ def register(update: telegram.Update, context: telegram.ext.CallbackContext):
 def login(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='We are in login section. You can use /cancel to cancel the operation in each section.\n Now, Please enter your email!')
     return LOGIN_ENTER_EMAIL
+
+def register_admin(update: telegram.Update, context: telegram.ext.CallbackContext):
+    update.message.reply_text(text='We are in admin register section. You can use /cancel to cancel the operation in each section.\n Now, Please enter your email!')
+    return REGISTER_ADMIN_ENTER_EMAIL
 
 def register_enter_email(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Check if the email is AUT email
@@ -83,7 +88,6 @@ def login_enter_email(update: telegram.Update, context: telegram.ext.CallbackCon
     return LOGIN_ENTER_EMAIL
 
 def login_enter_password(update: telegram.Update, context: telegram.ext.CallbackContext):
-    #TODO: Send the login request with given password and email and check if the status code is ok
     email = context.user_data['email']
     response, status = post(ApiUrls.LOGIN.value, username=email, password=update.message.text, chat_id=update.effective_chat.id)
     if status == 200:
@@ -93,13 +97,30 @@ def login_enter_password(update: telegram.Update, context: telegram.ext.Callback
     update.message.reply_text(text='email or password is not correct. Please enter your email again!')
     return LOGIN_ENTER_EMAIL
         
+def register_admin_enter_email(update: telegram.Update, context: telegram.ext.CallbackContext):
+    if re.fullmatch(SIMPLE_EMAIL_REGEX, update.message.text):
+        context.user_data['email'] = update.message.text #Saving the email to use it in next request
+        update.message.reply_text(text='Now, Please enter the secret :)')
+        return REGISTER_ADMIN_ENTER_SECRET
+    update.message.reply_text(text='This is not an email dude! Please re enter your email!')
+    return REGISTER_ADMIN_ENTER_EMAIL
+
+def register_admin_enter_secret(update: telegram.Update, context: telegram.ext.CallbackContext):
+    email = context.user_data['email']
+    response, status = post(ApiUrls.REGISTER_ADMIN.value, email=email, secret=update.message.text)
+    if status == 200:
+        update.message.reply_text(text='Admin access activated!')    
+        return ConversationHandler.END
+    update.message.reply_text(text='The secret is not correct. Please enter the secret again!')
+    return REGISTER_ADMIN_ENTER_SECRET
 
 def cancel(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='Operation Canceled!')
     return ConversationHandler.END
 
 conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start), CommandHandler('register', register), CommandHandler('login', login)],
+        entry_points=[CommandHandler('start', start), CommandHandler('register', register), CommandHandler('login', login), \
+                      CommandHandler('register_admin', register_admin)],
         states={
             # REGISTER STATES
             REGISTER_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), register_enter_email)],
@@ -108,6 +129,10 @@ conv_handler = ConversationHandler(
             # LOGIN STATES
             LOGIN_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), login_enter_email)],
             LOGIN_ENTER_PASSWORD: [MessageHandler((Filters.text & ~ Filters.command), login_enter_password)],
+
+            # REGISTER_ADMIN STATES
+            REGISTER_ADMIN_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
+            REGISTER_ADMIN_ENTER_SECRET: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_secret)],
             
         },
         fallbacks=[CommandHandler('cancel', cancel)],
