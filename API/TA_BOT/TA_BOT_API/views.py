@@ -3,17 +3,18 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
+from django.views.generic.base import View
 import requests
 
 from rest_framework import status
-from rest_framework.viewsets import ViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from telegram import chat
 
-from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, LogoutSerializer
-from .models import AuthData
+from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, LogoutSerializer, CategorySerilizer
+from .models import AuthData, Category
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
 from smtplib import SMTPException
@@ -137,3 +138,12 @@ class AuthView(ViewSet):
             return Response(data={}, status=status.HTTP_200_OK) 
         
         raise ValidationError(detail='The data is not valid!')
+
+class MemberCategoryView(ViewSet):
+
+    authentication_classes = [TokenAuthentication]
+
+    def get_all_categories(self,request):
+        categories = Category.objects.all()
+        seri = CategorySerilizer(categories, many=True)
+        return Response(data=seri.data, status=status.HTTP_200_OK)

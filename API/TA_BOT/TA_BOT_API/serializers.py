@@ -1,6 +1,8 @@
 from django.core.validators import MinLengthValidator, validate_integer
+from django.db.models import fields
 from rest_framework import serializers
 from django.core.validators import MinLengthValidator,MaxLengthValidator,DecimalValidator
+from .models import Category
 
 class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
@@ -25,3 +27,9 @@ class AdminRegisterSerializer(serializers.Serializer):
 class LogoutSerializer(serializers.Serializer):
     '''This is a serializer for logout. it receives a chat_id to remove it from user active sessions.'''
     chat_id = serializers.IntegerField()
+
+class CategorySerilizer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Category
+        fields = '__all__'
