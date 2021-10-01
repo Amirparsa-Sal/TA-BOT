@@ -6,7 +6,8 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 import logging
 import environ
 import re
-from request_util import ApiUrls, post, post_with_auth
+from request_util import ApiUrls, post, post_with_auth, get_with_auth
+from json import loads
 
 # Create a .env file inside the folder containing a variable named BOT_TOKEN and the value of access token.
 env = environ.Env()
@@ -39,7 +40,8 @@ def is_authorized(func):
 
     def wrapper_func(update, context, **kwargs):
         if 'token' in context.user_data.keys():
-            return func(update,context,**kwargs)
+            token = context.user_data['token']
+            return func(update, context, token=token, **kwargs)
         else:
             update.message.reply_text('You are not logged in yet! Use /login command!')
 
@@ -137,13 +139,24 @@ def register_admin_enter_secret(update: telegram.Update, context: telegram.ext.C
     update.message.reply_text(text='The secret is not correct. Please enter the secret again!')
     return REGISTER_ADMIN_ENTER_SECRET
 
+@is_authorized
+def get_timeline(update: telegram.Update, context: telegram.ext.CallbackContext, token=None):
+    response, status = get_with_auth(ApiUrls.MEMBER_GET_CATEGORIES.value, token)
+    
+    # Create message
+    message = 'List of all course sections:\n\n'
+    for i, category in enumerate(response):
+        message += f"{i+1}) {category['title']} -> {'taught' if category['is_taught'] else 'not taught'}\n\n"
+    
+    update.message.reply_text(text=message)
+        
+
 def cancel(update: telegram.Update, context: telegram.ext.CallbackContext):
     update.message.reply_text(text='Operation Canceled!')
     return ConversationHandler.END
 
 @is_authorized
-def logout(update: telegram.Update, context: telegram.ext.CallbackContext):
-    token = context.user_data['token']
+def logout(update: telegram.Update, context: telegram.ext.CallbackContext, token):
     chat_id = update.effective_chat.id
     response,status = post_with_auth(ApiUrls.LOGOUT.value, token, chat_id=chat_id)
     if status != 200:
@@ -154,7 +167,7 @@ def logout(update: telegram.Update, context: telegram.ext.CallbackContext):
 
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), CommandHandler('register', register), CommandHandler('login', login), \
-                      CommandHandler('register_admin', register_admin)],
+                      CommandHandler('register_admin', register_admin), CommandHandler('timeline', get_timeline)],
         states={
             # REGISTER STATES
             REGISTER_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), register_enter_email)],

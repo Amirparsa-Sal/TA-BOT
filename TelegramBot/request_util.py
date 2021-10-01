@@ -13,6 +13,13 @@ class ApiUrls(Enum):
     LOGIN = AUTH_BASE + 'login/'
     LOGOUT = AUTH_BASE + 'logout/'
 
+    ###### Member Urls
+
+    MEMBER_BASE_URL = BASE_URL + 'member/'
+
+    # Member Categories
+    MEMBER_GET_CATEGORIES = MEMBER_BASE_URL + 'categories'
+
 def post(url, **kwargs):
     # Creating response body
     data = dict()
@@ -29,4 +36,13 @@ def post_with_auth(url, auth_token, **kwargs):
         data[key] = value
     # Sending the request
     response = requests.post(url, data=data, headers={'Authorization':f'Token {auth_token}'})
+    return response.json(), response.status_code
+
+def get_with_auth(url, auth_token, **kwargs):
+    # Creating query params
+    params = dict()
+    for key,value in kwargs.items():
+        params[key] = value
+    # Sending the request
+    response = requests.get(url, headers={'Authorization':f'Token {auth_token}'}, params=params)
     return response.json(), response.status_code
