@@ -55,3 +55,6 @@ class TelegramActiveSessions(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='active_sessions')
     allow_notif = models.BooleanField(default=False)
     
+class Category(models.Model):
+    title = models.CharField(max_length=64)
+    is_taught = models.BooleanField(default=False)
