@@ -53,4 +53,5 @@ class User(AbstractBaseUser, PermissionsMixin):
 class TelegramActiveSessions(models.Model):
     chat_id = models.BigIntegerField(null=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='active_sessions')
+    allow_notif = models.BooleanField(default=False)
     
