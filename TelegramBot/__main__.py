@@ -3,7 +3,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 import logging
 import environ
 import re
-from request_util import ApiUrls, post, post_with_auth, get_with_auth
+from request_util import ApiUrls, post, post_with_auth, get_with_auth, get
 from json import loads
 
 # Create a .env file inside the folder containing a variable named BOT_TOKEN and the value of access token.
@@ -53,6 +53,18 @@ def not_authorized(func):
         else:
             update.message.reply_text('You must /logout before this operation')
 
+    return wrapper_func
+
+# A decorator to get user last login if needed
+def get_last_login(func):
+
+    def wrapper_func(update, context, **kwargs):
+        if 'token' not in context.user_data.keys():
+            response, status = get(ApiUrls.LAST_LOGIN.value, chat_id=update.effective_chat.id)
+            if response['token'] is not None:
+                context.user_data['token'] = response['token']
+        return func(update,context,**kwargs)
+    
     return wrapper_func
 
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
@@ -136,6 +148,7 @@ def register_admin_enter_secret(update: telegram.Update, context: telegram.ext.C
     update.message.reply_text(text='The secret is not correct. Please enter the secret again!')
     return REGISTER_ADMIN_ENTER_SECRET
 
+@get_last_login
 @is_authorized
 def get_timeline(update: telegram.Update, context: telegram.ext.CallbackContext, token=None):
     response, status = get_with_auth(ApiUrls.MEMBER_GET_CATEGORIES.value, token)
@@ -153,7 +166,7 @@ def cancel(update: telegram.Update, context: telegram.ext.CallbackContext):
     return ConversationHandler.END
 
 @is_authorized
-def logout(update: telegram.Update, context: telegram.ext.CallbackContext, token):
+def logout(update: telegram.Update, context: telegram.ext.CallbackContext, token=None):
     chat_id = update.effective_chat.id
     response,status = post_with_auth(ApiUrls.LOGOUT.value, token, chat_id=chat_id)
     if status != 200:

@@ -12,6 +12,7 @@ class ApiUrls(Enum):
     REGISTER_ADMIN = AUTH_BASE + 'register-admin/'
     LOGIN = AUTH_BASE + 'login/'
     LOGOUT = AUTH_BASE + 'logout/'
+    LAST_LOGIN = AUTH_BASE + 'last-login'
 
     ###### Member Urls
 
@@ -45,4 +46,13 @@ def get_with_auth(url, auth_token, **kwargs):
         params[key] = value
     # Sending the request
     response = requests.get(url, headers={'Authorization':f'Token {auth_token}'}, params=params)
+    return response.json(), response.status_code
+
+def get(url, **kwargs):
+    # Creating query params
+    params = dict()
+    for key,value in kwargs.items():
+        params[key] = value
+    # Sending the request
+    response = requests.get(url, params=params)
     return response.json(), response.status_code
