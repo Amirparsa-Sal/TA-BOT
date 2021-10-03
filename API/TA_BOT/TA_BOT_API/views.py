@@ -138,20 +138,19 @@ class AuthView(ViewSet):
         raise ValidationError(detail='The data is not valid!')
     
     def get_last_login(self, request):
-        seri = ChatIdSerializer(data=request.data)
+        chat_id = request.GET.get('chat_id', None)
 
-        if seri.is_valid():
-            chat_id = seri.validated_data.get('chat_id')
-            
-            # Delete chat_id from user sessions
-            try:
-                active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
-                token = Token.objects.get(user=active_session.user)
-                return Response(data={'token': token.key}, status=status.HTTP_200_OK) 
-            except TelegramActiveSessions.DoesNotExist:
-                return Response(data={'token': None}, status=status.HTTP_200_OK)
+        if chat_id is None:
+            raise ValidationError(detail='chat_id is not in request params!')
+
+        # Delete chat_id from user sessions
+        try:
+            active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+            token = Token.objects.get(user=active_session.user)
+            return Response(data={'token': token.key}, status=status.HTTP_200_OK) 
+        except TelegramActiveSessions.DoesNotExist:
+            return Response(data={'token': None}, status=status.HTTP_200_OK)
         
-        raise ValidationError(detail='The data is not valid!')
 
 class MemberCategoryView(ViewSet):
 
