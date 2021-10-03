@@ -24,7 +24,7 @@ class AdminRegisterSerializer(serializers.Serializer):
     email = serializers.EmailField()
     secret = serializers.CharField()
 
-class LogoutSerializer(serializers.Serializer):
+class ChatIdSerializer(serializers.Serializer):
     '''This is a serializer for logout. it receives a chat_id to remove it from user active sessions.'''
     chat_id = serializers.IntegerField()
 

@@ -20,6 +20,9 @@ logout = AuthView.as_view({
     'post': 'logout'
 })
 
+last_login = AuthView.as_view({
+    'get': 'get_last_login'
+})
 # Member Category urls
 
 member_category_root = MemberCategoryView.as_view({
@@ -32,6 +35,7 @@ urlpatterns = [
     path('auth/register-admin/', register_admin),
     path('auth/login/', LoginApiView.as_view()),
     path('auth/logout/', logout),
+    path('auth/last-login', last_login),
 
     path('member/categories', member_category_root)
 ]

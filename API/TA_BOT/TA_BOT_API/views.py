@@ -5,13 +5,14 @@ from django.utils.crypto import get_random_string
 from django.conf import settings
 
 from rest_framework import status
-from rest_framework.viewsets import ModelViewSet, ViewSet
+from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import APIException, NotFound, ValidationError
+from rest_framework.authtoken.models import Token
 
-from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, LogoutSerializer, CategorySerilizer
-from .models import AuthData, Category
+from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, ChatIdSerializer, CategorySerilizer
+from .models import AuthData, Category, TelegramActiveSessions
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
 from smtplib import SMTPException
@@ -124,7 +125,7 @@ class AuthView(ViewSet):
         raise ValidationError(detail='The data is not valid!')
 
     def logout(self, request):
-        seri = LogoutSerializer(data=request.data)
+        seri = ChatIdSerializer(data=request.data)
         if seri.is_valid():
             chat_id = seri.validated_data.get('chat_id')
             
@@ -133,6 +134,22 @@ class AuthView(ViewSet):
             user.active_sessions.filter(chat_id=chat_id).delete()
 
             return Response(data={}, status=status.HTTP_200_OK) 
+        
+        raise ValidationError(detail='The data is not valid!')
+    
+    def get_last_login(self, request):
+        seri = ChatIdSerializer(data=request.data)
+
+        if seri.is_valid():
+            chat_id = seri.validated_data.get('chat_id')
+            
+            # Delete chat_id from user sessions
+            try:
+                active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+                token = Token.objects.get(user=active_session.user)
+                return Response(data={'token': token.key}, status=status.HTTP_200_OK) 
+            except TelegramActiveSessions.DoesNotExist:
+                return Response(data={'token': None}, status=status.HTTP_200_OK)
         
         raise ValidationError(detail='The data is not valid!')
 
