@@ -3,15 +3,12 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
-from django.views.generic.base import View
-import requests
 
 from rest_framework import status
 from rest_framework.viewsets import ModelViewSet, ViewSet
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import APIException, NotFound, ValidationError
-from telegram import chat
 
 from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, LogoutSerializer, CategorySerilizer
 from .models import AuthData, Category

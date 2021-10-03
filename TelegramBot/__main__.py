@@ -1,7 +1,4 @@
-from os import stat
-from rest_framework import response
 import telegram
-from telegram import chat
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 import logging
 import environ
