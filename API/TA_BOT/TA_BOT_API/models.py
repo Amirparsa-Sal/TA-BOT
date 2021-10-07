@@ -58,3 +58,8 @@ class TelegramActiveSessions(models.Model):
 class Category(models.Model):
     title = models.CharField(max_length=64)
     is_taught = models.BooleanField(default=False)
+
+class Resource(models.Model):
+    category = models.ForeignKey(Category, related_name='resources', on_delete=models.CASCADE)
+    title = models.CharField(max_length=128,null=False,blank=False)
+    link = models.URLField(null=False)
