@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
+from django.views.generic.base import View
 
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
@@ -156,7 +157,21 @@ class MemberCategoryView(ViewSet):
 
     authentication_classes = [TokenAuthentication]
 
-    def get_all_categories(self,request):
+    def get_all_categories(self, request):
         categories = Category.objects.all()
         seri = CategorySerilizer(categories, many=True)
         return Response(data=seri.data, status=status.HTTP_200_OK)
+
+class AdminCategoryView(ViewSet):
+    
+    authentication_classes = [TokenAuthentication]
+
+    def change_category_status(self, request, cat_id=None):
+        try:
+            category = Category.objects.get(pk=cat_id)
+            category.is_taught = not category.is_taught
+            category.save()
+            seri = CategorySerilizer(category)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            raise NotFound(detail=f'Category(id = {cat_id}) not found!')

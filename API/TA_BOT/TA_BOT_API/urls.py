@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import AuthView, LoginApiView, MemberCategoryView
+from .views import AuthView, LoginApiView, MemberCategoryView,AdminCategoryView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -29,6 +29,10 @@ member_category_root = MemberCategoryView.as_view({
     'get': 'get_all_categories'
 })
 
+admin_category_with_id = AdminCategoryView.as_view({
+    'put': 'change_category_status'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
@@ -37,5 +41,7 @@ urlpatterns = [
     path('auth/logout/', logout),
     path('auth/last-login', last_login),
 
-    path('member/categories', member_category_root)
+    path('member/categories', member_category_root),
+    path('admin/categories/<int:cat_id>/', admin_category_with_id)
+
 ]
