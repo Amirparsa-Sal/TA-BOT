@@ -75,5 +75,5 @@ class HomeWork(models.Model):
     title = models.CharField(max_length=64)
     file = models.FileField(upload_to=homework_file_directory_path, null=True)
     grade = models.OneToOneField(Grade, on_delete=models.SET_NULL, null=True)
-    due_date = models.DateField()
+    due_date_time = models.DateTimeField()
     published = models.BooleanField(default=False)
