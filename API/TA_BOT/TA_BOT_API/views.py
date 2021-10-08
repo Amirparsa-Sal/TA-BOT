@@ -12,8 +12,9 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
-from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, ChatIdSerializer, CategorySerilizer
-from .models import AuthData, Category, TelegramActiveSessions
+from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
+    ChatIdSerializer, CategorySerilizer, ResourceSerializer
+from .models import AuthData, Category, TelegramActiveSessions, Resource
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
 from smtplib import SMTPException
@@ -175,3 +176,51 @@ class AdminCategoryView(ViewSet):
             return Response(data=seri.data, status=status.HTTP_200_OK)
         except Category.DoesNotExist:
             raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+
+    def add_resource(self, request, cat_id):
+        try:
+            category = Category.objects.get(pk=cat_id)
+            seri = ResourceSerializer(data=request.data)
+            if seri.is_valid():
+                resource = Resource(title=seri.validated_data.get('title'), \
+                                    link=seri.validated_data.get('link'),
+                                    category=category)
+                resource.save()
+                return Response(data=seri.data, status=status.HTTP_200_OK)
+            raise ValidationError(detail='The data is not valid!')
+        except Category.DoesNotExist:
+            raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+
+    def get_all_resources(self, request, cat_id):
+        try:
+            category = Category.objects.get(pk=cat_id)
+            resources = list(category.resources.all())
+            seri = ResourceSerializer(resources, many=True)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+
+class AdminResourceView(ViewSet):
+
+    authentication_classes = [TokenAuthentication]
+
+    def update_resource(self, request, res_id):
+        try:
+            res = Resource.objects.get(pk=res_id)
+            seri = ResourceSerializer(data=request.data)
+            if seri.is_valid():
+                res.title = seri.validated_data.get('title')
+                res.link = seri.validated_data.get('link')
+                res.save()
+                return Response(data=seri.data, status=status.HTTP_200_OK)
+            raise ValidationError(detail='The data is not valid!')
+        except:
+            raise NotFound(detail=f'Resource(id = {res_id}) not found!')
+
+    def delete_resource(self, request, res_id):
+        try:
+            res = Resource.objects.get(pk=res_id)
+            res.delete()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except:
+            raise NotFound(detail=f'Resource(id = {res_id}) not found!')

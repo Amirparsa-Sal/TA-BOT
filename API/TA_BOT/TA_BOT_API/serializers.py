@@ -2,7 +2,7 @@ from django.core.validators import MinLengthValidator, validate_integer
 from django.db.models import fields
 from rest_framework import serializers
 from django.core.validators import MinLengthValidator,MaxLengthValidator,DecimalValidator
-from .models import Category
+from .models import Category,Resource
 
 class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
@@ -33,3 +33,9 @@ class CategorySerilizer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = '__all__'
+
+class ResourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Resource
+        fields = '__all__'
+        read_only_fields = ['category']

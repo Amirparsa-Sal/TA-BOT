@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import AuthView, LoginApiView, MemberCategoryView,AdminCategoryView
+from .views import AuthView, LoginApiView, MemberCategoryView,AdminCategoryView,AdminResourceView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -33,6 +33,16 @@ admin_category_with_id = AdminCategoryView.as_view({
     'put': 'change_category_status'
 })
 
+admin_category_resources = AdminCategoryView.as_view({
+    'get': 'get_all_resources',
+    'post': 'add_resource'
+})
+
+admin_resource_with_id = AdminResourceView.as_view({
+    'put': 'update_resource',
+    'delete': 'delete_resource'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
@@ -42,6 +52,8 @@ urlpatterns = [
     path('auth/last-login', last_login),
 
     path('member/categories', member_category_root),
-    path('admin/categories/<int:cat_id>/', admin_category_with_id)
+    path('admin/categories/<int:cat_id>/', admin_category_with_id),
+    path('admin/categories/<int:cat_id>/resources/', admin_category_resources),
 
+    path('admin/resources/<int:res_id>/', admin_resource_with_id)
 ]
