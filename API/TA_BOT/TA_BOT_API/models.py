@@ -62,4 +62,4 @@ class Category(models.Model):
 class Resource(models.Model):
     category = models.ForeignKey(Category, related_name='resources', on_delete=models.CASCADE)
     title = models.CharField(max_length=128,null=False,blank=False)
-    link = models.URLField(null=False)
+    link = models.CharField(max_length=1024)
