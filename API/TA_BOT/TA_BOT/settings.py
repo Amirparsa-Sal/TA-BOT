@@ -147,3 +147,6 @@ REDIS_PORT = 6379
 AUTHENTICATION_BACKENDS = [
     'TA_BOT_API.backends.AuthenticationBackend',
 ]
+
+MEDIA_ROOT = BASE_DIR / 'uploads'
+MEDIA_URL = '/files/'
