@@ -12,9 +12,10 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
-from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
-    ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer
-from .models import AuthData, Category, TelegramActiveSessions, Resource, HomeWork
+from .serializers import GradeSerializer, UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
+    ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer \
+
+from .models import AuthData, Category, Grade, TelegramActiveSessions, Resource, HomeWork
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
 from smtplib import SMTPException
@@ -234,12 +235,15 @@ class AdminHomeWorkView(ViewSet):
     authentication_classes = [TokenAuthentication]
     serializer_class = HomeWorkSerializer
     update_serializer_class = HomeWorkPartialUpdateSerializer
+    grade_serializer_class = GradeSerializer
 
     def get_homework(self, request, hw_id=None):
         try:
             hw = HomeWork.objects.get(pk=hw_id)
             seri = self.serializer_class(hw)
-            return Response(data=seri.data, status=status.HTTP_200_OK)
+            data = seri.data
+            data['has_grade'] = hw.grade is not None
+            return Response(data=data, status=status.HTTP_200_OK)
         except:
             raise NotFound(detail=f'homework(id= {hw_id}) not found!')
     
@@ -279,3 +283,64 @@ class AdminHomeWorkView(ViewSet):
             except HomeWork.DoesNotExist:
                 raise NotFound(detail=f'homework(id= {hw_id}) not found!')
         raise ValidationError(detail='The data is not valid!')
+
+    def update_grade(self, request, hw_id=None):
+        seri = self.grade_serializer_class(data=request.data)
+        if seri.is_valid():
+            try:
+                hw = HomeWork.objects.get(pk=hw_id)
+                if hw.grade is not None:
+                    hw.grade.link = seri.validated_data.get('link')
+                    hw.grade.published = seri.validated_data.get('published')
+                else:
+                    grade = Grade(link=seri.validated_data.get('link'), published=seri.validated_data.get('published'))
+                    grade.save()
+                    hw.grade = grade
+                hw.save()
+                return Response(data=seri.data, status=status.HTTP_200_OK)
+            except HomeWork.DoesNotExist:
+                raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+        raise ValidationError(detail=seri.errors)
+
+    def delete_grade(self ,request, hw_id=None):
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            hw.grade = None
+            hw.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+    def get_grade(self ,request, hw_id=None):
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            grade = hw.grade
+            if grade is None:
+                return NotFound(details=f'There is no grade for this hw!')
+            seri = self.grade_serializer_class(grade)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+    def publish_grade(self, request, hw_id=None):
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            if hw.grade is None:
+                return NotFound(details=f'There is no grade for this hw!')
+            hw.grade.published = True
+            hw.grade.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+    def unpublish_grade(self, request, hw_id=None):
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            if hw.grade is None:
+                return NotFound(details=f'There is no grade for this hw!')
+            hw.grade.published = False
+            hw.grade.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')

@@ -57,6 +57,20 @@ admin_homeworks_with_id = AdminHomeWorkView.as_view({
     'get': 'get_homework'
 })
 
+admin_homeworks_grade = AdminHomeWorkView.as_view({
+    'put': 'update_grade',
+    'delete': 'delete_grade',
+    'get': 'get_grade'
+})
+
+admin_homeworks_grade_publish = AdminHomeWorkView.as_view({
+    'post': 'publish_grade'
+})
+
+admin_homeworks_grade_unpublish = AdminHomeWorkView.as_view({
+    'post': 'unpublish_grade'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
@@ -73,4 +87,7 @@ urlpatterns = [
 
     path('admin/homeworks/', admin_homeworks_root),
     path('admin/homeworks/<int:hw_id>/', admin_homeworks_with_id),
+    path('admin/homeworks/<int:hw_id>/grade', admin_homeworks_grade),
+    path('admin/homeworks/<int:hw_id>/grade/publish', admin_homeworks_grade_publish),
+    path('admin/homeworks/<int:hw_id>/grade/unpublish', admin_homeworks_grade_unpublish)
 ]
