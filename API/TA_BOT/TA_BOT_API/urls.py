@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import AuthView, LoginApiView, MemberCategoryView,AdminCategoryView,AdminResourceView
+from rest_framework.routers import DefaultRouter
+
+from .views import AuthView, LoginApiView, MemberCategoryView,AdminCategoryView,AdminResourceView,AdminHomeWorkView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -43,6 +45,18 @@ admin_resource_with_id = AdminResourceView.as_view({
     'delete': 'delete_resource'
 })
 
+
+admin_homeworks_root = AdminHomeWorkView.as_view({
+    'get': 'get_all_homeworks',
+    'post': 'create_homework'
+})
+
+admin_homeworks_with_id = AdminHomeWorkView.as_view({
+    'delete': 'delete_homework',
+    'patch': 'update_homework',
+    'get': 'get_homework'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
@@ -55,5 +69,8 @@ urlpatterns = [
     path('admin/categories/<int:cat_id>/', admin_category_with_id),
     path('admin/categories/<int:cat_id>/resources/', admin_category_resources),
 
-    path('admin/resources/<int:res_id>/', admin_resource_with_id)
+    path('admin/resources/<int:res_id>/', admin_resource_with_id),
+
+    path('admin/homeworks/', admin_homeworks_root),
+    path('admin/homeworks/<int:hw_id>/', admin_homeworks_with_id),
 ]

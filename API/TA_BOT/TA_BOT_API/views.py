@@ -1,9 +1,9 @@
+from os import stat
 from django.contrib import auth
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
-from django.views.generic.base import View
 
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
@@ -13,8 +13,8 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
 from .serializers import UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
-    ChatIdSerializer, CategorySerilizer, ResourceSerializer
-from .models import AuthData, Category, TelegramActiveSessions, Resource
+    ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer
+from .models import AuthData, Category, TelegramActiveSessions, Resource, HomeWork
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
 from smtplib import SMTPException
@@ -157,15 +157,17 @@ class AuthView(ViewSet):
 class MemberCategoryView(ViewSet):
 
     authentication_classes = [TokenAuthentication]
+    serializer_class = CategorySerilizer
 
     def get_all_categories(self, request):
         categories = Category.objects.all()
-        seri = CategorySerilizer(categories, many=True)
+        seri = self.serializer_class(categories, many=True)
         return Response(data=seri.data, status=status.HTTP_200_OK)
 
 class AdminCategoryView(ViewSet):
     
     authentication_classes = [TokenAuthentication]
+    serializer_class = ResourceSerializer
 
     def change_category_status(self, request, cat_id=None):
         try:
@@ -180,7 +182,7 @@ class AdminCategoryView(ViewSet):
     def add_resource(self, request, cat_id):
         try:
             category = Category.objects.get(pk=cat_id)
-            seri = ResourceSerializer(data=request.data)
+            seri = self.serializer_class(data=request.data)
             if seri.is_valid():
                 resource = Resource(title=seri.validated_data.get('title'), \
                                     link=seri.validated_data.get('link'),
@@ -195,7 +197,7 @@ class AdminCategoryView(ViewSet):
         try:
             category = Category.objects.get(pk=cat_id)
             resources = list(category.resources.all())
-            seri = ResourceSerializer(resources, many=True)
+            seri = self.serializer_class(resources, many=True)
             return Response(data=seri.data, status=status.HTTP_200_OK)
         except Category.DoesNotExist:
             raise NotFound(detail=f'Category(id = {cat_id}) not found!')
@@ -203,11 +205,12 @@ class AdminCategoryView(ViewSet):
 class AdminResourceView(ViewSet):
 
     authentication_classes = [TokenAuthentication]
+    serializer_class = ResourceSerializer
 
     def update_resource(self, request, res_id):
         try:
             res = Resource.objects.get(pk=res_id)
-            seri = ResourceSerializer(data=request.data)
+            seri = self.serializer_class(data=request.data)
             if seri.is_valid():
                 res.title = seri.validated_data.get('title')
                 res.link = seri.validated_data.get('link')
@@ -224,3 +227,55 @@ class AdminResourceView(ViewSet):
             return Response(data=None, status=status.HTTP_200_OK)
         except:
             raise NotFound(detail=f'Resource(id = {res_id}) not found!')
+
+class AdminHomeWorkView(ViewSet):
+
+    queryset = HomeWork.objects.all()
+    authentication_classes = [TokenAuthentication]
+    serializer_class = HomeWorkSerializer
+    update_serializer_class = HomeWorkPartialUpdateSerializer
+
+    def get_homework(self, request, hw_id=None):
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            seri = self.serializer_class(hw)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+    
+    def get_all_homeworks(self, request):
+        homeworks = HomeWork.objects.all()
+        seri = self.serializer_class(homeworks, many=True)
+        return Response(data=seri.data, status=status.HTTP_200_OK)
+
+    def create_homework(self, request):
+        seri = self.serializer_class(data=request.data)
+        if seri.is_valid():
+            hw = HomeWork(title=seri.validated_data.get('title'), \
+                          file=seri.validated_data.get('file'), \
+                          published=seri.validated_data.get('published'), \
+                          due_date_time=seri.validated_data.get('due_date_time'))
+            hw.save()
+            seri = self.serializer_class(hw)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        raise ValidationError(detail='The data is not valid!')
+
+    def delete_homework(self, request, hw_id=None):
+        HomeWork.objects.filter(pk=hw_id).delete()
+        return Response(data=None, status=status.HTTP_200_OK)
+
+    def update_homework(self, request, hw_id=None):
+        seri = self.update_serializer_class(data=request.data)
+        if seri.is_valid():
+            try:
+                hw = HomeWork.objects.get(pk=hw_id)
+                hw.title = seri.validated_data.get('title',hw.title)
+                hw.file = seri.validated_data.get('file', hw.file)
+                hw.due_date_time = seri.validated_data.get('due_date_time', hw.due_date_time)
+                hw.published = seri.validated_data.get('published', hw.published)
+                hw.save()
+                seri = self.serializer_class(hw)
+                return Response(data=seri.data, status=status.HTTP_200_OK)
+            except HomeWork.DoesNotExist:
+                raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+        raise ValidationError(detail='The data is not valid!')

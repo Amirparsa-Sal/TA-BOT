@@ -2,7 +2,7 @@ from django.core.validators import MinLengthValidator, validate_integer
 from django.db.models import fields
 from rest_framework import serializers
 from django.core.validators import MinLengthValidator,MaxLengthValidator,DecimalValidator
-from .models import Category,Resource
+from .models import Category, HomeWork,Resource
 
 class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
@@ -39,3 +39,15 @@ class ResourceSerializer(serializers.ModelSerializer):
         model = Resource
         fields = '__all__'
         read_only_fields = ['category']
+
+class HomeWorkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HomeWork
+        fields = ['id','title','file','published','due_date_time']
+        read_only_fields = ['id']
+
+class HomeWorkPartialUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False)
+    file = serializers.FileField(required=False)
+    published = serializers.BooleanField(required=False)
+    due_date_time = serializers.DateTimeField(required=False)
