@@ -1,4 +1,5 @@
 from os import stat_result
+from django.http import response
 import telegram
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 import logging
@@ -33,13 +34,15 @@ REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWOR
 REGISTER_ADMIN_ENTER_EMAIL, REGISTER_ADMIN_ENTER_SECRET, \
 ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_CREATE_HOMEWORKS_TITLE, ADMIN_CREATE_HOMEWORKS_FILE, \
 ADMIN_CREATE_HOMEWORKS_DUE_DATE,\
-MEMBER_TIMELINE = range(16)
+ADMIN_UPDATE_GRADE_ENTER_LINK, \
+ADMIN_CONFIRMATION_STATE, \
+MEMBER_TIMELINE = range(18)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
 AUT_EMAIL_REGEX = '^[A-Za-z0-9._%+-]+@aut\.ac\.ir'
 OTP_REGEX = '^[0-9]{5}'
-
+URL_REGEX = "(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
 
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Logout if needed
@@ -291,17 +294,18 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
     if text == 'Homework Details':
         response, status = get_with_auth(f'{ApiUrls.ADMIN_HOMEWORK_ROOT.value}{selected_hw_id}/', token)
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
-            return ADMIN_HOMEWORKS_MAIN
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
         # Creating message
+        link =  f"[link]({response['grade_link']})" if response['grade_link'] else 'No link attached.'
         message = f"Details of {response['title']}:\n\n \
                     Deadline: {timestamp_to_jalali(response['due_date_time'])} \n\n \
                     The homework {'is' if response['published'] else 'is not'} published. \n\n \
-                    Grades for this homework {'are' if response['has_grade'] else 'are not'} published. \n\n \
+                    Grades: {link} \n\n \
                     Homework file {'is' if response['file'] is not None else 'is not'} attached."
         # Getting hw file if needed
         if response['file'] is not None:
-            update.message.reply_text(text=message)
+            update.message.reply_text(text=message, parse_mode='Markdown', disable_web_page_preview=True)
             update.message.reply_text(f'Uploading the HW file...', reply_markup=ADMIN_EACH_HW_KEYBOARD)
             file_address = get_file(response['file'])
             with open(file_address, 'rb') as file:
@@ -313,8 +317,8 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
     elif text == 'Publish HW':
         response,status = patch_with_auth(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=selected_hw_id), token, published=True)
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
-            return ADMIN_HOMEWORKS_MAIN
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
         update.message.reply_text(text=f'The homework is now published!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
         return ADMIN_EACH_HOMEWORK
     # Send unpublish request
@@ -322,16 +326,16 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
         response,status = patch_with_auth(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=selected_hw_id), token, published=False)
         #TODO: handle 500 errors
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
-            return ADMIN_HOMEWORKS_MAIN
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
         update.message.reply_text(text=f'The homework is now unpublished!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
         return ADMIN_EACH_HOMEWORK
     # Send grade publish request
     elif text == 'Publish Grades':
         response,status = post_with_auth(ApiUrls.ADMIN_HOMEWORK_GRADE_PUBLISH.value.format(id=selected_hw_id), token)
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
-            return ADMIN_HOMEWORKS_MAIN
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
         update.message.reply_text(text=f'The grades are now published!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
         return ADMIN_EACH_HOMEWORK
     # Send grade unpublish request
@@ -339,15 +343,63 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
         response,status = post_with_auth(ApiUrls.ADMIN_HOMEWORK_GRADE_UNPUBLISH.value.format(id=selected_hw_id), token)
         #TODO: handle 500 errors
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
-            return ADMIN_HOMEWORKS_MAIN
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
         update.message.reply_text(text=f'The grades are now unpublished!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
         return ADMIN_EACH_HOMEWORK
+    # Navigate to confirmation page to delete
+    elif text == 'Delete HW':
+        context.user_data['object_to_delete'] = 'HW'
+        update.message.reply_text(text='Are you sure?', reply_markup=CONFIRMATION_KEYBOARD)
+        return ADMIN_CONFIRMATION_STATE
+    # Navigate to update Grade
+    elif text == 'Update HW Grades':
+        update.message.reply_text(text='Please enter the link of the grades.', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_UPDATE_GRADE_ENTER_LINK
 
     #TODO: add other commands here 
     # Stay at this state if the user enters shit
-    update.message.reply_text(text='Sorry I didnt understand!')
-    return ADMIN_MANAGE_HOMEWORKS
+    update.message.reply_text(text='Sorry I didnt understand!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+    return ADMIN_EACH_HOMEWORK
+
+def admin_confirmation_state(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    # Delete if confirmed
+    if text == CONFIRM_KEYWORD:
+        token = context.user_data['token']
+        object_to_delete = context.user_data['object_to_delete']
+        if object_to_delete == 'HW':
+            id_to_delete = context.user_data['selected_hw_id']
+            response,status = delete_with_auth(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=id_to_delete), token)
+            if status != 200:
+                update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+                return ADMIN_EACH_HOMEWORK
+            update.message.reply_text(text='Homework deleted successfully!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+    elif text == DECLINE_KEYWORD:
+        update.message.reply_text(text='Operation canceled!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!', reply_markup=CONFIRMATION_KEYBOARD)
+    return ADMIN_CONFIRMATION_STATE
+
+def admin_update_grade_enter_link(update: telegram.Update, context: telegram.ext.CallbackContext):
+    link = update.message.text
+    # Check if the url is valid
+    if re.fullmatch(URL_REGEX, link):
+        selected_hw_id = context.user_data['selected_hw_id']
+        token = context.user_data['token']
+        response, status = put_with_auth(ApiUrls.ADMIN_HOMEWORK_GRADE.value.format(id=selected_hw_id), token, link=link, published=False)
+        print(response)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
+        update.message.reply_text(text='Grades updated successfully!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Please enter a valid url!', reply_markup=CANCEL_KEYBOARD)
+    return ADMIN_UPDATE_GRADE_ENTER_LINK
 
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler)],
@@ -378,7 +430,10 @@ conv_handler = ConversationHandler(
             # ADMIN_CREATE_HOMEWORKS_TITLE: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
             # ADMIN_CREATE_HOMEWORKS_FILE: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
             # ADMIN_CREATE_HOMEWORKS_DUE_DATE: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
+            ADMIN_UPDATE_GRADE_ENTER_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_update_grade_enter_link)],
 
+            ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
+            
         },
         fallbacks=[MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
         allow_reentry=False
@@ -386,4 +441,4 @@ conv_handler = ConversationHandler(
 
 dispatcher = updater.dispatcher
 dispatcher.add_handler(conv_handler)
-updater.start_polling()
+updater.start_polling()     

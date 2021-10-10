@@ -29,6 +29,7 @@ class ApiUrls(Enum):
     # Admin Homeworks
     ADMIN_HOMEWORK_ROOT = ADMIN_BASE_URL + 'homeworks/'
     ADMIN_HOMEWORK_WITH_ID = ADMIN_BASE_URL + 'homeworks/{id}/'
+    ADMIN_HOMEWORK_GRADE = ADMIN_BASE_URL + 'homeworks/{id}/grade/'
     ADMIN_HOMEWORK_GRADE_PUBLISH = ADMIN_BASE_URL + 'homeworks/{id}/grade/publish/'
     ADMIN_HOMEWORK_GRADE_UNPUBLISH = ADMIN_BASE_URL + 'homeworks/{id}/grade/unpublish/'
 
@@ -96,6 +97,18 @@ def patch_with_auth(url, auth_token, **kwargs):
     for key,value in kwargs.items():
         data[key] = value
     # Sending the request
+    response = requests.patch(url, data=data, headers={'Authorization':f'Token {auth_token}'})
+    return response.json() if response.content else None, response.status_code
 
-    response= requests.patch(url, data=data, headers={'Authorization':f'Token {auth_token}'})
+def delete_with_auth(url, auth_token):
+    response = requests.delete(url, headers={'Authorization':f'Token {auth_token}'})
+    return response.json() if response.content else None, response.status_code
+
+def put_with_auth(url, auth_token, **kwargs):
+    # Creating request body
+    data = dict()
+    for key,value in kwargs.items():
+        data[key] = value
+    # Sending the request
+    response = requests.put(url, data=data, headers={'Authorization':f'Token {auth_token}'})
     return response.json() if response.content else None, response.status_code

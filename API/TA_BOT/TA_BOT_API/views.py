@@ -255,7 +255,7 @@ class AdminHomeWorkView(ViewSet):
             hw = HomeWork.objects.get(pk=hw_id)
             seri = self.serializer_class(hw)
             data = seri.data
-            data['has_grade'] = hw.grade is not None
+            data['grade_link'] = hw.grade.link if hw.grade else None
             return Response(data=data, status=status.HTTP_200_OK)
         except:
             raise NotFound(detail=f'homework(id= {hw_id}) not found!')
@@ -302,14 +302,16 @@ class AdminHomeWorkView(ViewSet):
         if seri.is_valid():
             try:
                 hw = HomeWork.objects.get(pk=hw_id)
-                if hw.grade is not None:
-                    hw.grade.link = seri.validated_data.get('link')
-                    hw.grade.published = seri.validated_data.get('published')
+                grade = hw.grade
+                if grade is not None:
+                    grade.link = seri.validated_data.get('link')
+                    grade.published = seri.validated_data.get('published')
+                    grade.save()
                 else:
                     grade = Grade(link=seri.validated_data.get('link'), published=seri.validated_data.get('published'))
                     grade.save()
                     hw.grade = grade
-                hw.save()
+                    hw.save()
                 return Response(data=seri.data, status=status.HTTP_200_OK)
             except HomeWork.DoesNotExist:
                 raise NotFound(detail=f'homework(id= {hw_id}) not found!')
