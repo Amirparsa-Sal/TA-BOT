@@ -88,6 +88,6 @@ urlpatterns = [
     path('admin/homeworks/', admin_homeworks_root),
     path('admin/homeworks/<int:hw_id>/', admin_homeworks_with_id),
     path('admin/homeworks/<int:hw_id>/grade', admin_homeworks_grade),
-    path('admin/homeworks/<int:hw_id>/grade/publish', admin_homeworks_grade_publish),
-    path('admin/homeworks/<int:hw_id>/grade/unpublish', admin_homeworks_grade_unpublish)
+    path('admin/homeworks/<int:hw_id>/grade/publish/', admin_homeworks_grade_publish),
+    path('admin/homeworks/<int:hw_id>/grade/unpublish/', admin_homeworks_grade_unpublish)
 ]

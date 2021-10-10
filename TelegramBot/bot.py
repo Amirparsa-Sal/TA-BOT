@@ -1,10 +1,10 @@
 from os import stat_result
 import telegram
-from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, RegexHandler
+from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 import logging
 import environ
 import re
-from request_util import ApiUrls, post, post_with_auth, get_with_auth, get,get_file
+from request_util import *
 from json import loads
 from decorators import not_authorized,is_authorized,get_last_login
 from keyboards import *
@@ -283,6 +283,7 @@ def admin_manage_homeworks(update: telegram.Update, context: telegram.ext.Callba
     return ADMIN_MANAGE_HOMEWORKS
 
 def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackContext):
+    '''This is an entry for working with an invidual homework.'''
     text = update.message.text
     selected_hw_id = context.user_data['selected_hw_id']
     token = context.user_data['token']
@@ -290,13 +291,13 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
     if text == 'Homework Details':
         response, status = get_with_auth(f'{ApiUrls.ADMIN_HOMEWORK_ROOT.value}{selected_hw_id}/', token)
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_HOMEWORKS_MAIN)
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_HOMEWORKS_MAIN
         # Creating message
         message = f"Details of {response['title']}:\n\n \
                     Deadline: {timestamp_to_jalali(response['due_date_time'])} \n\n \
                     The homework {'is' if response['published'] else 'is not'} published. \n\n \
-                    Grades for this homework {'are' if response['published'] else 'are not'} published. \n\n \
+                    Grades for this homework {'are' if response['has_grade'] else 'are not'} published. \n\n \
                     Homework file {'is' if response['file'] is not None else 'is not'} attached."
         # Getting hw file if needed
         if response['file'] is not None:
@@ -308,7 +309,42 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
         else:
             update.message.reply_text(text=message, reply_markup=ADMIN_EACH_HW_KEYBOARD)
         return ADMIN_EACH_HOMEWORK
-    #TODO: add other commands here
+    # Send publish request
+    elif text == 'Publish HW':
+        response,status = patch_with_auth(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=selected_hw_id), token, published=True)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+        update.message.reply_text(text=f'The homework is now published!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+    # Send unpublish request
+    elif text == 'Unpublish HW':
+        response,status = patch_with_auth(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=selected_hw_id), token, published=False)
+        #TODO: handle 500 errors
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+        update.message.reply_text(text=f'The homework is now unpublished!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+    # Send grade publish request
+    elif text == 'Publish Grades':
+        response,status = post_with_auth(ApiUrls.ADMIN_HOMEWORK_GRADE_PUBLISH.value.format(id=selected_hw_id), token)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+        update.message.reply_text(text=f'The grades are now published!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+    # Send grade unpublish request
+    elif text == 'Unpublish Grades':
+        response,status = post_with_auth(ApiUrls.ADMIN_HOMEWORK_GRADE_UNPUBLISH.value.format(id=selected_hw_id), token)
+        #TODO: handle 500 errors
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+        update.message.reply_text(text=f'The grades are now unpublished!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+
+    #TODO: add other commands here 
     # Stay at this state if the user enters shit
     update.message.reply_text(text='Sorry I didnt understand!')
     return ADMIN_MANAGE_HOMEWORKS

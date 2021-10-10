@@ -28,24 +28,27 @@ class ApiUrls(Enum):
     ADMIN_BASE_URL = BASE_API_URL + 'admin/'
     # Admin Homeworks
     ADMIN_HOMEWORK_ROOT = ADMIN_BASE_URL + 'homeworks/'
+    ADMIN_HOMEWORK_WITH_ID = ADMIN_BASE_URL + 'homeworks/{id}/'
+    ADMIN_HOMEWORK_GRADE_PUBLISH = ADMIN_BASE_URL + 'homeworks/{id}/grade/publish/'
+    ADMIN_HOMEWORK_GRADE_UNPUBLISH = ADMIN_BASE_URL + 'homeworks/{id}/grade/unpublish/'
 
 def post(url, **kwargs):
-    # Creating response body
+    # Creating request body
     data = dict()
     for key,value in kwargs.items():
         data[key] = value
     # Sending the request
     response = requests.post(url, data=data)
-    return response.json(), response.status_code
+    return response.json() if response.content else None, response.status_code
 
 def post_with_auth(url, auth_token, **kwargs):
-    # Creating response body
+    # Creating request body
     data = dict()
     for key,value in kwargs.items():
         data[key] = value
     # Sending the request
     response = requests.post(url, data=data, headers={'Authorization':f'Token {auth_token}'})
-    return response.json(), response.status_code
+    return response.json() if response.content else None, response.status_code
 
 def get_with_auth(url, auth_token, **kwargs):
     # Creating query params
@@ -54,7 +57,7 @@ def get_with_auth(url, auth_token, **kwargs):
         params[key] = value
     # Sending the request
     response = requests.get(url, headers={'Authorization':f'Token {auth_token}'}, params=params)
-    return response.json(), response.status_code
+    return response.json() if response.content else None, response.status_code
 
 def get(url, **kwargs):
     # Creating query params
@@ -63,7 +66,7 @@ def get(url, **kwargs):
         params[key] = value
     # Sending the request
     response = requests.get(url, params=params)
-    return response.json(), response.status_code
+    return response.json() if response.content else None, response.status_code
 
 
 def getFilename_fromCd(cd):
@@ -86,3 +89,13 @@ def get_file(relative_url):
         file.write(response.content)
     
     return f'downloads/{filename}'
+
+def patch_with_auth(url, auth_token, **kwargs):
+    # Creating request body
+    data = dict()
+    for key,value in kwargs.items():
+        data[key] = value
+    # Sending the request
+
+    response= requests.patch(url, data=data, headers={'Authorization':f'Token {auth_token}'})
+    return response.json() if response.content else None, response.status_code
