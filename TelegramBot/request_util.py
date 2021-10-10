@@ -1,12 +1,16 @@
 from enum import Enum
 import requests
+import re
+import os
 
 class ApiUrls(Enum):
 
-    BASE_URL = 'http://127.0.0.1:8000/api/'
+    BASE_URL = 'http://127.0.0.1:8000'
 
-    # Auth Urls
-    AUTH_BASE = BASE_URL + 'auth/'
+    BASE_API_URL = 'http://127.0.0.1:8000/api/'
+
+    ###### Auth Urls
+    AUTH_BASE = BASE_API_URL + 'auth/'
     SEND_OTP = AUTH_BASE + 'send-otp/'
     ACTIVATE_ACCOUNT = AUTH_BASE + 'activate-account/'
     REGISTER_ADMIN = AUTH_BASE + 'register-admin/'
@@ -16,10 +20,14 @@ class ApiUrls(Enum):
 
     ###### Member Urls
 
-    MEMBER_BASE_URL = BASE_URL + 'member/'
-
+    MEMBER_BASE_URL = BASE_API_URL + 'member/'
     # Member Categories
     MEMBER_GET_CATEGORIES = MEMBER_BASE_URL + 'categories'
+
+    ###### Admin Urls
+    ADMIN_BASE_URL = BASE_API_URL + 'admin/'
+    # Admin Homeworks
+    ADMIN_HOMEWORK_ROOT = ADMIN_BASE_URL + 'homeworks/'
 
 def post(url, **kwargs):
     # Creating response body
@@ -56,3 +64,25 @@ def get(url, **kwargs):
     # Sending the request
     response = requests.get(url, params=params)
     return response.json(), response.status_code
+
+
+def getFilename_fromCd(cd):
+    """
+    Get filename from content-disposition
+    """
+    if not cd:
+        return None
+    fname = re.findall('filename=(.+)', cd)
+    if len(fname) == 0:
+        return None
+    return fname[0][1:-1]
+
+def get_file(relative_url):
+    response = requests.get(f'{ApiUrls.BASE_URL.value}{relative_url}', allow_redirects=True)
+    filename = getFilename_fromCd(response.headers.get('Content-Disposition'))
+    if not os.path.exists('downloads'):
+        os.mkdir('downloads')
+    with open(f'downloads/{filename}', 'wb') as file:
+        file.write(response.content)
+    
+    return f'downloads/{filename}'

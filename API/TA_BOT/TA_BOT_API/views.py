@@ -28,12 +28,25 @@ user_model = get_user_model()
 redis_instance = redis.StrictRedis(host=settings.REDIS_HOST,port=settings.REDIS_PORT, db=0)
 secret = getattr(settings, 'SECRET_KEY', 'thikiuridi')
 
-class LoginApiView(ObtainAuthToken):
+from rest_framework.authtoken.models import Token
+
+class CustomAuthToken(ObtainAuthToken):
     ''' A view for login users.\n
         /api/auth/login (POST)
     '''
 
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data,
+                                       context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        token, created = Token.objects.get_or_create(user=user)
+        return Response({
+            'token': token.key,
+            'is_admin': user.is_staff
+        })
 
 class AuthView(ViewSet):
 
@@ -150,7 +163,7 @@ class AuthView(ViewSet):
         try:
             active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
             token = Token.objects.get(user=active_session.user)
-            return Response(data={'token': token.key}, status=status.HTTP_200_OK) 
+            return Response(data={'token': token.key, 'is_admin':active_session.user.is_staff}, status=status.HTTP_200_OK) 
         except TelegramActiveSessions.DoesNotExist:
             return Response(data={'token': None}, status=status.HTTP_200_OK)
         

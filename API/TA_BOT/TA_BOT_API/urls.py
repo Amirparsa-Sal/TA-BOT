@@ -3,7 +3,7 @@ from django.urls import path, include
 
 from rest_framework.routers import DefaultRouter
 
-from .views import AuthView, LoginApiView, MemberCategoryView,AdminCategoryView,AdminResourceView,AdminHomeWorkView
+from .views import AuthView, CustomAuthToken, MemberCategoryView,AdminCategoryView,AdminResourceView,AdminHomeWorkView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -75,7 +75,7 @@ urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
     path('auth/register-admin/', register_admin),
-    path('auth/login/', LoginApiView.as_view()),
+    path('auth/login/', CustomAuthToken.as_view()),
     path('auth/logout/', logout),
     path('auth/last-login', last_login),
 
