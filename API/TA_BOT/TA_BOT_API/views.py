@@ -377,3 +377,36 @@ class AdminHomeWorkView(ViewSet):
             return Response(data=None, status=status.HTTP_200_OK)
         except HomeWork.DoesNotExist:
             raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+class AdminNotificationsView(ViewSet):
+    
+    authentication_classes = [TokenAuthentication]
+    permissions_classes = [IsAdminUser]
+
+    def get_incoming_notif_status(self, request):
+        user = request.user
+        try:
+            active_session = TelegramActiveSessions.objects.get(user=user)
+            return Response(data={'status': active_session.allow_notif}, status=status.HTTP_200_OK)
+        except:
+            raise NotFound('User telegram session not found!')
+
+    def enable_notif(self, request):
+        user = request.user
+        try:
+            active_session = TelegramActiveSessions.objects.get(user=user)
+            active_session.allow_notif = True
+            active_session.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except:
+            raise NotFound('User telegram session not found!')
+
+    def disable_notif(self, request):
+        user = request.user
+        try:
+            active_session = TelegramActiveSessions.objects.get(user=user)
+            active_session.allow_notif = False
+            active_session.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except:
+            raise NotFound('User telegram session not found!')

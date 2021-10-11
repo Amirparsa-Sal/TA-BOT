@@ -3,7 +3,7 @@ from django.urls import path, include
 
 from rest_framework.routers import DefaultRouter
 
-from .views import AuthView, CustomAuthToken, MemberCategoryView,AdminCategoryView,AdminResourceView,AdminHomeWorkView
+from .views import AuthView, CustomAuthToken, MemberCategoryView,AdminCategoryView,AdminResourceView,AdminHomeWorkView,AdminNotificationsView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -76,6 +76,18 @@ admin_homeworks_grade_unpublish = AdminHomeWorkView.as_view({
     'post': 'unpublish_grade'
 })
 
+admin_notification_enable = AdminNotificationsView.as_view({
+    'post': 'enable_notif'
+})
+
+admin_notification_disable = AdminNotificationsView.as_view({
+    'post': 'disable_notif'
+})
+
+admin_get_notif_status = AdminNotificationsView.as_view({
+    'get': 'get_incoming_notif_status'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
@@ -95,5 +107,9 @@ urlpatterns = [
     path('admin/homeworks/<int:hw_id>/', admin_homeworks_with_id),
     path('admin/homeworks/<int:hw_id>/grade/', admin_homeworks_grade),
     path('admin/homeworks/<int:hw_id>/grade/publish/', admin_homeworks_grade_publish),
-    path('admin/homeworks/<int:hw_id>/grade/unpublish/', admin_homeworks_grade_unpublish)
+    path('admin/homeworks/<int:hw_id>/grade/unpublish/', admin_homeworks_grade_unpublish),
+
+    path('admin/incoming-notifs/status/', admin_get_notif_status),
+    path('admin/incoming-notifs/enable/', admin_notification_enable),
+    path('admin/incoming-notifs/disable/', admin_notification_disable),
 ]
