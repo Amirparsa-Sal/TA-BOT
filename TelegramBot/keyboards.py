@@ -4,6 +4,7 @@ from telegram import ReplyKeyboardMarkup,KeyboardButton
 CANCEL_COMMAND = '/cancel'
 CONFIRM_KEYWORD = 'Yes'
 DECLINE_KEYWORD = 'No'
+SKIP_KEYWORD = 'Skip'
 
 def create_vertical_keyboard(buttons: Iterable):
     keyboard = [[KeyboardButton(button)] for button in buttons]
@@ -31,6 +32,9 @@ CONFIRMATION_KEYBOARD = ReplyKeyboardMarkup(
     ],
     one_time_keyboard=True
 )
+
+SKIP_CANCEL_KEYBOARD = create_vertical_keyboard_with_cancel_button([SKIP_KEYWORD])
+
 # ADMIN HOMEWORK KEYBOARDS
 
 ADMIN_HOMEWORKS_MAIN_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Manage Current Homeworks', 'Create a New Homework'])

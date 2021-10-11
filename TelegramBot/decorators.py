@@ -32,7 +32,7 @@ def get_last_login(func):
             if status != 200:
                 update.message.reply_text(text='Oops sth went wrong!')
                 return 
-                
+
             if response['token'] is not None:
                 context.user_data['token'] = response['token']
                 context.user_data['is_admin'] = response['is_admin']

@@ -1,7 +1,9 @@
+from calendar import calendar
 from os import stat_result
 from django.http import response
 import telegram
-from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
+from telegram import replymarkup
+from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
 import logging
 import environ
 import re
@@ -10,6 +12,7 @@ from json import loads
 from decorators import not_authorized,is_authorized,get_last_login
 from keyboards import *
 from date_utils import *
+from file_utils import *
 
 # Create a .env file inside the folder containing a variable named BOT_TOKEN and the value of access token.
 env = environ.Env()
@@ -32,17 +35,18 @@ bot = telegram.Bot(TOKEN)
 MEMBER_LOGGED_IN, ADMIN_LOGGED_IN, NOT_LOGGED_IN, \
 REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWORD, \
 REGISTER_ADMIN_ENTER_EMAIL, REGISTER_ADMIN_ENTER_SECRET, \
-ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_CREATE_HOMEWORKS_TITLE, ADMIN_CREATE_HOMEWORKS_FILE, \
-ADMIN_CREATE_HOMEWORKS_DUE_DATE,\
+ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWORKS_TITLE, ADMIN_HOMEWORKS_FILE, \
+ADMIN_HOMEWORKS_DUE_DATE, ADMIN_HOMEWORKS_DUE_TIME, \
 ADMIN_UPDATE_GRADE_ENTER_LINK, \
 ADMIN_CONFIRMATION_STATE, \
-MEMBER_TIMELINE = range(18)
+MEMBER_TIMELINE = range(19)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
 AUT_EMAIL_REGEX = '^[A-Za-z0-9._%+-]+@aut\.ac\.ir'
 OTP_REGEX = '^[0-9]{5}'
 URL_REGEX = "(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
+TIME_REGEX = "([01]?[0-9]|2[0-3]):[0-5][0-9]"
 
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Logout if needed
@@ -58,6 +62,7 @@ def start(update: telegram.Update, context: telegram.ext.CallbackContext):
 
     return NOT_LOGGED_IN
 
+@get_last_login
 def cancel(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Checking if user has logged in or not
     if 'token' not in context.user_data.keys():
@@ -254,6 +259,10 @@ def admin_homeworks_main(update: telegram.Update, context: telegram.ext.Callback
         response, status = get_with_auth(ApiUrls.ADMIN_HOMEWORK_ROOT.value, token)
         
         # Creating buttons using retrieved homeworks and store homeworks id in local storage to use later.
+        if len(response) == 0:
+            update.message.reply_text(text='No homework available!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+        
         keyboard_buttons = []
         context.user_data['homeworks'] = dict()
         for i,hw in enumerate(response):
@@ -264,9 +273,11 @@ def admin_homeworks_main(update: telegram.Update, context: telegram.ext.Callback
         update.message.reply_text(text='Please choose the homework you want.', reply_markup=keyboard)
         return ADMIN_MANAGE_HOMEWORKS
         
-    # TODO: Navigate to create homework section
     elif text == 'Create a New Homework':
-        pass
+        context.user_data['homework_input'] = dict()
+        context.user_data['action'] = 'create'
+        update.message.reply_text(text='Please enter the title of the homework!', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_TITLE
     
     # Stay at this state if the user enters shit
     update.message.reply_text(text='Sorry I didnt understand!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
@@ -356,7 +367,12 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
     elif text == 'Update HW Grades':
         update.message.reply_text(text='Please enter the link of the grades.', reply_markup=CANCEL_KEYBOARD)
         return ADMIN_UPDATE_GRADE_ENTER_LINK
-
+    # Navigate to hw select title
+    elif text == 'Update HW':
+        context.user_data['homework_input'] = dict()
+        context.user_data['action'] = 'update'
+        update.message.reply_text(text='Please enter the title of the homework or use skip button to keep the previous value.', reply_markup=SKIP_CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_TITLE
     #TODO: add other commands here 
     # Stay at this state if the user enters shit
     update.message.reply_text(text='Sorry I didnt understand!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
@@ -401,8 +417,76 @@ def admin_update_grade_enter_link(update: telegram.Update, context: telegram.ext
     update.message.reply_text(text='Please enter a valid url!', reply_markup=CANCEL_KEYBOARD)
     return ADMIN_UPDATE_GRADE_ENTER_LINK
 
+def admin_homeworks_title(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    action = context.user_data['action']
+    # if the action is 'create' we must get the entered text. if the action is 'update' we must get the entered text unless it is 'skip'.
+    if (action == 'update' and text != SKIP_KEYWORD) or (action == 'create'):
+        context.user_data['homework_input']['title'] = text
+
+    if action == 'update':
+        update.message.reply_text('Now, please send the homework file or skip to keep the previous file.', reply_markup=SKIP_CANCEL_KEYBOARD)
+    elif action == 'create':
+        update.message.reply_text('Now, please send the homework file or skip and update the file later.', reply_markup=SKIP_CANCEL_KEYBOARD)
+    return ADMIN_HOMEWORKS_FILE
+
+def admin_homeworks_file(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    # If a file is sent we must download it.
+    if text is None:
+        file = context.bot.get_file(update.message.document)
+        file_name = get_file_name(file.file_path)
+        file.download(f'./downloads/{file_name}')
+        context.user_data['homework_input']['file'] = f'./downloads/{file_name}'
+    # If user enters shit
+    elif text != SKIP_KEYWORD:
+        update.message.reply_text('please send the homework file or skip!', reply_markup=SKIP_CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_FILE
+
+    action = context.user_data['action']
+    if action == 'update':
+        update.message.reply_text('Now, please set the homework due date or skip to keep the previous deadline.\nformat: yyyy-mm-dd hh:mm:ss', reply_markup=SKIP_CANCEL_KEYBOARD)
+    elif action == 'create':
+        update.message.reply_text('Now, please set the homework due date.\nformat: yyyy-mm-dd hh:mm:ss', reply_markup=CANCEL_KEYBOARD)
+    return ADMIN_HOMEWORKS_DUE_DATE
+
+def admin_homeworks_due_date(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    action = context.user_data['action']
+    #if the date time is valid we must convert it to gregorian date time
+    if is_valid_date_time(text):
+        context.user_data['homework_input']['due_date_time'] = jalali_to_gregorian(text)
+    # if user enters shit
+    elif (action == 'create') or (action == 'update' and text != SKIP_KEYWORD):
+        update.message.reply_text('Please enter a valid date time.\nformat: yyyy-mm-dd hh:mm:ss', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_DUE_DATE
+
+    token = context.user_data['token']
+    data = context.user_data['homework_input']
+    # Send update request if action is update
+    if action == 'update':
+        selected_hw_id = context.user_data['selected_hw_id']
+        response, status = multipart_form_data(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=selected_hw_id), token, data, file_address=data.get('file',None), method='PATCH')
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
+        update.message.reply_text(text='Homework updated successfully!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+        return ADMIN_EACH_HOMEWORK
+    # Send post request if action is create
+    elif action == 'create':
+        body = dict()
+        body['title'] = data['title']
+        body['due_date_time'] = data['due_date_time']
+        file_address = data.get('file',None)
+        response, status = multipart_form_data(ApiUrls.ADMIN_HOMEWORK_ROOT.value, token, body, file_address=file_address, method='POST')
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
+            return ADMIN_HOMEWORKS_MAIN
+        update.message.reply_text(text='Homework created successfully!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
+        return ADMIN_HOMEWORKS_MAIN
+
 conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler)],
+        entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
         states={
             # NOT_LOGGED_IN STATE
             NOT_LOGGED_IN: [MessageHandler((Filters.text & ~ Filters.command), not_logged_in)],
@@ -427,9 +511,9 @@ conv_handler = ConversationHandler(
             ADMIN_HOMEWORKS_MAIN: [MessageHandler((Filters.text & ~ Filters.command), admin_homeworks_main)],
             ADMIN_MANAGE_HOMEWORKS: [MessageHandler((Filters.text & ~ Filters.command), admin_manage_homeworks)],
             ADMIN_EACH_HOMEWORK: [MessageHandler((Filters.text & ~ Filters.command), admin_each_homework)],
-            # ADMIN_CREATE_HOMEWORKS_TITLE: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
-            # ADMIN_CREATE_HOMEWORKS_FILE: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
-            # ADMIN_CREATE_HOMEWORKS_DUE_DATE: [MessageHandler((Filters.text & ~ Filters.command), register_admin_enter_email)],
+            ADMIN_HOMEWORKS_TITLE: [MessageHandler((Filters.text & ~ Filters.command), admin_homeworks_title)],
+            ADMIN_HOMEWORKS_FILE: [MessageHandler(((Filters.document | Filters.text) & ~ Filters.command), admin_homeworks_file)],
+            ADMIN_HOMEWORKS_DUE_DATE: [MessageHandler((Filters.text & ~ Filters.command), admin_homeworks_due_date)],
             ADMIN_UPDATE_GRADE_ENTER_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_update_grade_enter_link)],
 
             ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
