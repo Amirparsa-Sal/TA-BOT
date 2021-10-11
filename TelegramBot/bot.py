@@ -401,10 +401,10 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
 
 def admin_confirmation_state(update: telegram.Update, context: telegram.ext.CallbackContext):
     text = update.message.text
+    confirmation_action = context.user_data['confirmation_action']
     # Delete if confirmed
     if text == CONFIRM_KEYWORD:
         token = context.user_data['token']
-        confirmation_action = context.user_data['confirmation_action']
         # DELETE HW
         if confirmation_action == 'HW_DELETE':
             id_to_delete = context.user_data['selected_hw_id']
@@ -425,9 +425,12 @@ def admin_confirmation_state(update: telegram.Update, context: telegram.ext.Call
             return ADMIN_EACH_CATEGORY
 
     elif text == DECLINE_KEYWORD:
-        update.message.reply_text(text='Operation canceled!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
-        return ADMIN_EACH_HOMEWORK
-
+        if confirmation_action == 'HW_DELETE':
+            update.message.reply_text(text='Operation canceled!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
+            return ADMIN_EACH_HOMEWORK
+        elif confirmation_action == 'RES_DELETE':
+            update.message.reply_text(text='Operation canceled!', reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD)
+            return ADMIN_EACH_RESOURCE
     # Stay at this state if the user enters shit
     update.message.reply_text(text='Sorry I didnt understand!', reply_markup=CONFIRMATION_KEYBOARD)
     return ADMIN_CONFIRMATION_STATE
