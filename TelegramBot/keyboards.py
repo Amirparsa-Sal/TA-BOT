@@ -19,7 +19,7 @@ def create_vertical_keyboard_with_cancel_button(buttons: Iterable):
 
 NOT_LOGGED_IN_KEYBOARD = create_vertical_keyboard(['Register', 'Login'])
 
-ADMIN_MAIN_KEYBOARD = create_vertical_keyboard(['Homeworks', 'Resources', 'Timeline', 'Send Notifications', \
+ADMIN_MAIN_KEYBOARD = create_vertical_keyboard(['Homeworks', 'Timeline & Resources', 'Send Notifications', \
                                                 'Incoming Notifications', 'Logout'])
 
 MEMBER_MAIN_KEYBOARD = create_vertical_keyboard(['Ask Question', 'Homeworks', 'Resources', 'Timeline', 'Logout'])
@@ -49,5 +49,6 @@ ADMIN_EACH_HW_KEYBOARD = ReplyKeyboardMarkup(
     ]
 )
 
-# ADMIN TIMELINE KEYBOARDS
-ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Change Status'])
+# ADMIN TIMELINE & RESOURCES KEYBOARDS
+ADMIN_EACH_CATEGORY_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Change Status', 'Manage Current Resources', 'Add a New Resource'])
+ADMIN_EACH_RESOURCE_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Get Resource Details', 'Update Resource', 'Delete Resource'])

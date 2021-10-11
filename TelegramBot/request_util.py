@@ -40,6 +40,9 @@ class ApiUrls(Enum):
     ADMIN_CATEGORY_TOGGLE_STATUS = ADMIN_BASE_URL + 'categories/{id}/toggle-status/'
     ADMIN_CATEGORY_RESOURCES = ADMIN_BASE_URL + 'categories/{id}/resources/'
 
+    # Admin Resource
+    ADMIN_RESOURCES_WITH_ID  = ADMIN_BASE_URL + 'resources/{id}/' 
+
 def post(url, **kwargs):
     '''Posts data with request body.'''
     # Creating request body

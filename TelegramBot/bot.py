@@ -37,16 +37,16 @@ REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWOR
 REGISTER_ADMIN_ENTER_EMAIL, REGISTER_ADMIN_ENTER_SECRET, \
 ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWORKS_TITLE, ADMIN_HOMEWORKS_FILE, ADMIN_HOMEWORKS_DUE_DATE,\
 ADMIN_UPDATE_GRADE_ENTER_LINK, \
-ADMIN_GET_TIMELINE, ADMIN_EACH_TIMELINE_CATEGORY, \
+ADMIN_GET_CATEGORIES, ADMIN_EACH_CATEGORY, \
+ADMIN_GET_RESOURCES, ADMIN_EACH_RESOURCE, ADMIN_RESOURCE_TITLE, ADMIN_RESOURCE_LINK, \
 ADMIN_CONFIRMATION_STATE, \
-MEMBER_TIMELINE = range(20)
+MEMBER_TIMELINE = range(24)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
 AUT_EMAIL_REGEX = '^[A-Za-z0-9._%+-]+@aut\.ac\.ir'
 OTP_REGEX = '^[0-9]{5}'
 URL_REGEX = "(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
-TIME_REGEX = "([01]?[0-9]|2[0-3]):[0-5][0-9]"
 
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Logout if needed
@@ -120,7 +120,7 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
     if text == 'Homeworks':
         update.message.reply_text(text='You are in homeworks section.', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
         return ADMIN_HOMEWORKS_MAIN
-    elif text == 'Timeline':
+    elif text == 'Timeline & Resources':
         response, status = get_with_auth(ApiUrls.ADMIN_CATEGORY_ROOT.value, token)
         if status != 200:
             update.message.reply_text(text='Oops! Something went wrong!', reply_markup=ADMIN_MAIN_KEYBOARD)
@@ -138,8 +138,8 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
             context.user_data['categories'][f"{i+1}) {cat['title']}"] = cat['id']
 
         keyboard = create_vertical_keyboard_with_cancel_button(keyboard_buttons)
-        update.message.reply_text(text='You are in timeline section. which category do you want to change?', reply_markup=keyboard)
-        return ADMIN_GET_TIMELINE
+        update.message.reply_text(text='You are in timeline & resources section. which category do you want to change?', reply_markup=keyboard)
+        return ADMIN_GET_CATEGORIES
 
     # Logout user
     elif text == 'Logout':
@@ -381,7 +381,7 @@ def admin_each_homework(update: telegram.Update, context: telegram.ext.CallbackC
         return ADMIN_EACH_HOMEWORK
     # Navigate to confirmation page to delete
     elif text == 'Delete HW':
-        context.user_data['object_to_delete'] = 'HW'
+        context.user_data['confirmation_action'] = 'HW_DELETE'
         update.message.reply_text(text='Are you sure?', reply_markup=CONFIRMATION_KEYBOARD)
         return ADMIN_CONFIRMATION_STATE
     # Navigate to update Grade
@@ -404,8 +404,9 @@ def admin_confirmation_state(update: telegram.Update, context: telegram.ext.Call
     # Delete if confirmed
     if text == CONFIRM_KEYWORD:
         token = context.user_data['token']
-        object_to_delete = context.user_data['object_to_delete']
-        if object_to_delete == 'HW':
+        confirmation_action = context.user_data['confirmation_action']
+        # DELETE HW
+        if confirmation_action == 'HW_DELETE':
             id_to_delete = context.user_data['selected_hw_id']
             response,status = delete_with_auth(ApiUrls.ADMIN_HOMEWORK_WITH_ID.value.format(id=id_to_delete), token)
             if status != 200:
@@ -413,6 +414,16 @@ def admin_confirmation_state(update: telegram.Update, context: telegram.ext.Call
                 return ADMIN_EACH_HOMEWORK
             update.message.reply_text(text='Homework deleted successfully!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
             return ADMIN_HOMEWORKS_MAIN
+        # DELETE RESOURCE
+        elif confirmation_action == 'RES_DELETE':
+            id_to_delete = context.user_data['selected_res_id']
+            response,status = delete_with_auth(ApiUrls.ADMIN_RESOURCES_WITH_ID.value.format(id=id_to_delete), token)
+            if status != 200:
+                update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD)
+                return ADMIN_EACH_RESOURCE
+            update.message.reply_text(text='Resource deleted successfully!', reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+            return ADMIN_EACH_CATEGORY
+
     elif text == DECLINE_KEYWORD:
         update.message.reply_text(text='Operation canceled!', reply_markup=ADMIN_EACH_HW_KEYBOARD)
         return ADMIN_EACH_HOMEWORK
@@ -478,8 +489,11 @@ def admin_homeworks_due_date(update: telegram.Update, context: telegram.ext.Call
     if is_valid_date_time(text):
         context.user_data['homework_input']['due_date_time'] = jalali_to_gregorian(text)
     # if user enters shit
-    elif (action == 'create') or (action == 'update' and text != SKIP_KEYWORD):
+    elif action == 'create':
         update.message.reply_text('Please enter a valid date time.\nformat: yyyy-mm-dd hh:mm:ss', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_DUE_DATE
+    elif action == 'update' and text != SKIP_KEYWORD:
+        update.message.reply_text('Now, please set the homework due date or skip to keep the previous deadline.\nformat: yyyy-mm-dd hh:mm:ss', reply_markup=SKIP_CANCEL_KEYBOARD)
         return ADMIN_HOMEWORKS_DUE_DATE
 
     token = context.user_data['token']
@@ -506,32 +520,157 @@ def admin_homeworks_due_date(update: telegram.Update, context: telegram.ext.Call
         update.message.reply_text(text='Homework created successfully!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
         return ADMIN_HOMEWORKS_MAIN
 
-def admin_get_timeline(update: telegram.Update, context: telegram.ext.CallbackContext):
+def admin_get_categories(update: telegram.Update, context: telegram.ext.CallbackContext):
     text = update.message.text
     categories = context.user_data['categories']
     # Save selected category id in local storage to use it later in requests.
     if text[:-2] in categories.keys():
         context.user_data['selected_cat_id'] = categories[text[:-2]]
-        update.message.reply_text(f'What do you want to do with this category?', reply_markup=ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD)
-        return ADMIN_EACH_TIMELINE_CATEGORY
+        update.message.reply_text(f'What do you want to do with this category?', reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+        return ADMIN_EACH_CATEGORY
 
     # Stay at this state if the user enters shit
     update.message.reply_text(text='Sorry I didnt understand!')
-    return ADMIN_GET_TIMELINE
+    return ADMIN_GET_CATEGORIES
 
-def admin_each_timeline_category(update: telegram.Update, context: telegram.ext.CallbackContext):
+def admin_each_category(update: telegram.Update, context: telegram.ext.CallbackContext):
     text = update.message.text
     token = context.user_data['token']
+    # Change status of the category for timeline
     if text == 'Change Status':
         selected_cat_id = context.user_data['selected_cat_id']
         response, status = put_with_auth(ApiUrls.ADMIN_CATEGORY_TOGGLE_STATUS.value.format(id=selected_cat_id), token)
         if status != 200:
-            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD)
-            return ADMIN_EACH_TIMELINE_CATEGORY
-        update.message.reply_text(text=f"Category status changed to {'✅' if response['is_taught'] else '❌'}", reply_markup=ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD)
-        return ADMIN_EACH_TIMELINE_CATEGORY
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+            return ADMIN_EACH_CATEGORY
+        update.message.reply_text(text=f"Category status changed to {'✅' if response['is_taught'] else '❌'}", reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+        return ADMIN_EACH_CATEGORY
+    # Manage current resources of the category
+    elif text == 'Manage Current Resources':
+        selected_cat_id = context.user_data['selected_cat_id']
+        response, status = get_with_auth(ApiUrls.ADMIN_CATEGORY_RESOURCES.value.format(id=selected_cat_id), token)
+        if status != 200:
+            update.message.reply_text(text='Oops! Something went wrong!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        
+        # Creating buttons using retrieved homeworks and store homeworks id in local storage to use later.
+        if len(response) == 0:
+            update.message.reply_text(text='Timeline not available!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        
+        keyboard_buttons = []
+        context.user_data['resources'] = dict()
+        for i,res in enumerate(response):
+            keyboard_buttons.append(f"{i+1}) {res['title']}")
+            context.user_data['resources'][f"{i+1}) {res['title']}"] = res['id']
+
+        keyboard = create_vertical_keyboard_with_cancel_button(keyboard_buttons)
+        update.message.reply_text(text='Which resource do you want to change??', reply_markup=keyboard)
+        return ADMIN_GET_RESOURCES
+    # Add a new Resource
+    elif text == 'Add a New Resource':
+        context.user_data['resource_input'] = dict()
+        context.user_data['action'] = 'create'
+        update.message.reply_text(text='Please enter the resource title!', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_RESOURCE_TITLE
+
     update.message.reply_text(text='Sorry I didnt understand!')
-    return ADMIN_EACH_TIMELINE_CATEGORY
+    return ADMIN_EACH_CATEGORY
+
+def admin_get_resources(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    resources = context.user_data['resources']
+    # Save selected resource id in local storage to use it later in requests.
+    if text in resources.keys():
+        context.user_data['selected_res_id'] = resources[text]
+        update.message.reply_text(f'What do you want to do with this resource?', reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD)
+        return ADMIN_EACH_RESOURCE
+
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!')
+    return ADMIN_GET_RESOURCES
+
+def admin_each_resource(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    token = context.user_data['token']
+    selected_res_id = context.user_data['selected_res_id']
+    # Show details of an individiual resource
+    if text == 'Get Resource Details':
+        response, status = get_with_auth(ApiUrls.ADMIN_RESOURCES_WITH_ID.value.format(id=selected_res_id), token)
+        if status != 200:
+            update.message.reply_text(text='Oops! Something went wrong!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        update.message.reply_text(f"Resource name: {response['title']}\n\nResource link: [link]({response['link']})", reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD,parse_mode='Markdown')
+        return ADMIN_EACH_RESOURCE
+    
+    # Navigate to confirmation section to delete
+    elif text == 'Delete Resource':
+        context.user_data['confirmation_action'] = 'RES_DELETE'
+        update.message.reply_text(text='Are you sure?', reply_markup=CONFIRMATION_KEYBOARD)
+        return ADMIN_CONFIRMATION_STATE
+    # Navigate to update section
+    elif text == 'Update Resource':
+        context.user_data['resource_input'] = dict()
+        context.user_data['action'] = 'update'
+        update.message.reply_text(text='Please enter the resource title or use skip to keep the previous value.', reply_markup=SKIP_CANCEL_KEYBOARD)
+        return ADMIN_RESOURCE_TITLE
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!')
+    return ADMIN_GET_RESOURCES
+
+def admin_resource_title(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    action = context.user_data['action']
+    # if the action is 'create' we must get the entered text. if the action is 'update' we must get the entered text unless it is 'skip'.
+    if (action == 'update' and text != SKIP_KEYWORD) or (action == 'create'):
+        context.user_data['resource_input']['title'] = text
+
+    if action == 'update':
+        update.message.reply_text('Now, please send the resource link or skip to keep the previous link.', reply_markup=SKIP_CANCEL_KEYBOARD)
+    elif action == 'create':
+        update.message.reply_text('Now, please send the resource link.', reply_markup=CANCEL_KEYBOARD)
+    return ADMIN_RESOURCE_LINK
+
+def admin_resource_link(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    action = context.user_data['action']
+    #if the date time is valid we must convert it to gregorian date time
+    if re.fullmatch(URL_REGEX, text):
+        context.user_data['resource_input']['link'] = text
+    # if user enters shit
+    elif action == 'create': 
+        update.message.reply_text('Please enter a valid URL!', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_DUE_DATE
+    elif action == 'update' and text != SKIP_KEYWORD:
+        update.message.reply_text('Please enter a valid URL or skip to keep the previous link!', reply_markup=SKIP_CANCEL_KEYBOARD)
+        return ADMIN_HOMEWORKS_DUE_DATE
+
+    token = context.user_data['token']
+    data = context.user_data['resource_input']
+    # Send update request if action is update
+    if action == 'update':
+        patch_data = dict()
+        for key,value in data.items():
+            if value is not None:
+                patch_data[key] = value
+
+        selected_res_id = context.user_data['selected_res_id']
+        response, status = patch_with_auth_and_body(ApiUrls.ADMIN_RESOURCES_WITH_ID.value.format(id=selected_res_id), token, patch_data)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD)
+            return ADMIN_EACH_RESOURCE
+        update.message.reply_text(text='Resource updated successfully!', reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD)
+        return ADMIN_EACH_RESOURCE
+    # Send post request if action is create
+    elif action == 'create':
+        selected_cat_id = context.user_data['selected_cat_id']
+        response, status = post_with_auth(ApiUrls.ADMIN_CATEGORY_RESOURCES.value.format(id=selected_cat_id), token, title=data['title'], link=data['link'])
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+            return ADMIN_EACH_CATEGORY
+        update.message.reply_text(text='Resource created successfully!', reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+        return ADMIN_EACH_CATEGORY
+
 
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
@@ -564,10 +703,15 @@ conv_handler = ConversationHandler(
             ADMIN_HOMEWORKS_DUE_DATE: [MessageHandler((Filters.text & ~ Filters.command), admin_homeworks_due_date)],
             ADMIN_UPDATE_GRADE_ENTER_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_update_grade_enter_link)],
 
-            # ADMIN_TIMELINE
-            ADMIN_GET_TIMELINE: [MessageHandler((Filters.text & ~ Filters.command), admin_get_timeline)],
-            ADMIN_EACH_TIMELINE_CATEGORY: [MessageHandler((Filters.text & ~ Filters.command), admin_each_timeline_category)],
-            
+            # ADMIN_TIMELINE & RESOURCES
+            ADMIN_GET_CATEGORIES: [MessageHandler((Filters.text & ~ Filters.command), admin_get_categories)],
+            ADMIN_EACH_CATEGORY: [MessageHandler((Filters.text & ~ Filters.command), admin_each_category)],
+
+            ADMIN_GET_RESOURCES: [MessageHandler((Filters.text & ~ Filters.command), admin_get_resources)],
+            ADMIN_EACH_RESOURCE: [MessageHandler((Filters.text & ~ Filters.command), admin_each_resource)],
+            ADMIN_RESOURCE_TITLE: [MessageHandler((Filters.text & ~ Filters.command), admin_resource_title)],
+            ADMIN_RESOURCE_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_resource_link)],
+
             ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
             
         },
