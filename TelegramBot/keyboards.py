@@ -5,6 +5,8 @@ CANCEL_COMMAND = '/cancel'
 CONFIRM_KEYWORD = 'Yes'
 DECLINE_KEYWORD = 'No'
 SKIP_KEYWORD = 'Skip'
+ENABLE_KEYWORD = 'Enable'
+DISABLE_KEYWORD = 'Disable'
 
 def create_vertical_keyboard(buttons: Iterable):
     keyboard = [[KeyboardButton(button)] for button in buttons]
@@ -52,3 +54,11 @@ ADMIN_EACH_HW_KEYBOARD = ReplyKeyboardMarkup(
 # ADMIN TIMELINE & RESOURCES KEYBOARDS
 ADMIN_EACH_CATEGORY_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Change Status', 'Manage Current Resources', 'Add a New Resource'])
 ADMIN_EACH_RESOURCE_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Get Resource Details', 'Update Resource', 'Delete Resource'])
+
+# ADMIN INCOMING NOTIFS KEYBOARD
+ADMIN_INCOMING_NOTIFS_KEYBOARD = ReplyKeyboardMarkup(
+    [
+        [ENABLE_KEYWORD, DISABLE_KEYWORD]
+    ],
+    one_time_keyboard=True
+)

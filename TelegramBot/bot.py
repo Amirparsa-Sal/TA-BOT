@@ -39,8 +39,9 @@ ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWOR
 ADMIN_UPDATE_GRADE_ENTER_LINK, \
 ADMIN_GET_CATEGORIES, ADMIN_EACH_CATEGORY, \
 ADMIN_GET_RESOURCES, ADMIN_EACH_RESOURCE, ADMIN_RESOURCE_TITLE, ADMIN_RESOURCE_LINK, \
+ADMIN_INCOMIG_NOTIFS, \
 ADMIN_CONFIRMATION_STATE, \
-MEMBER_TIMELINE = range(24)
+MEMBER_TIMELINE = range(25)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
@@ -140,7 +141,13 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
         keyboard = create_vertical_keyboard_with_cancel_button(keyboard_buttons)
         update.message.reply_text(text='You are in timeline & resources section. which category do you want to change?', reply_markup=keyboard)
         return ADMIN_GET_CATEGORIES
-
+    elif text == 'Incoming Notifications':
+        response,status = get_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_STATUS.value, token)
+        if status != 200:
+            update.message.reply_text(text='Oops! Something went wrong!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        update.message.reply_text(text=f"Incoming notifications are {'enabled' if response['status'] else 'disabled.'}\n\n What do you want to do?", reply_markup=ADMIN_INCOMING_NOTIFS_KEYBOARD)
+        return ADMIN_INCOMIG_NOTIFS
     # Logout user
     elif text == 'Logout':
         chat_id = update.effective_chat.id
@@ -674,6 +681,29 @@ def admin_resource_link(update: telegram.Update, context: telegram.ext.CallbackC
         update.message.reply_text(text='Resource created successfully!', reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
         return ADMIN_EACH_CATEGORY
 
+def admin_incoming_notifs(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    token = context.user_data['token']
+    # Enable notifs
+    if text == ENABLE_KEYWORD:
+        response,status = post_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_ENABLE.value, token)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        update.message.reply_text(text='Incoming notifs enabled!', reply_markup=ADMIN_MAIN_KEYBOARD)
+        return ADMIN_LOGGED_IN
+    # Disable notifs
+    elif text == DISABLE_KEYWORD:
+        response,status = post_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_DISABLE.value, token)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        update.message.reply_text(text='Incoming notifs disabled!', reply_markup=ADMIN_MAIN_KEYBOARD)
+        return ADMIN_LOGGED_IN
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!')
+    return ADMIN_GET_RESOURCES
+    
 
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
@@ -714,6 +744,8 @@ conv_handler = ConversationHandler(
             ADMIN_EACH_RESOURCE: [MessageHandler((Filters.text & ~ Filters.command), admin_each_resource)],
             ADMIN_RESOURCE_TITLE: [MessageHandler((Filters.text & ~ Filters.command), admin_resource_title)],
             ADMIN_RESOURCE_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_resource_link)],
+
+            ADMIN_INCOMIG_NOTIFS: [MessageHandler((Filters.text & ~ Filters.command), admin_incoming_notifs)],
 
             ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
             

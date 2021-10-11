@@ -43,6 +43,11 @@ class ApiUrls(Enum):
     # Admin Resource
     ADMIN_RESOURCES_WITH_ID  = ADMIN_BASE_URL + 'resources/{id}/' 
 
+    # Admin Incoming Notifs
+    ADMIN_INCOMING_NOTIF_STATUS  = ADMIN_BASE_URL + 'incoming-notifs/status/'
+    ADMIN_INCOMING_NOTIF_ENABLE  = ADMIN_BASE_URL + 'incoming-notifs/enable/'
+    ADMIN_INCOMING_NOTIF_DISABLE  = ADMIN_BASE_URL + 'incoming-notifs/disable/'
+
 def post(url, **kwargs):
     '''Posts data with request body.'''
     # Creating request body
