@@ -5,10 +5,12 @@ from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
 
-from rest_framework import status
+from rest_framework import serializers, status
+from rest_framework import permissions
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
@@ -181,14 +183,20 @@ class MemberCategoryView(ViewSet):
 class AdminCategoryView(ViewSet):
     
     authentication_classes = [TokenAuthentication]
-    serializer_class = ResourceSerializer
+    permissions_classes = [IsAdminUser]
+    serializer_class = CategorySerilizer
+
+    def get_all_categories(self, request):
+        categories = Category.objects.all()
+        seri = self.serializer_class(categories, many=True)
+        return Response(data=seri.data, status=status.HTTP_200_OK)
 
     def change_category_status(self, request, cat_id=None):
         try:
             category = Category.objects.get(pk=cat_id)
             category.is_taught = not category.is_taught
             category.save()
-            seri = CategorySerilizer(category)
+            seri = self.serializer_class(category)
             return Response(data=seri.data, status=status.HTTP_200_OK)
         except Category.DoesNotExist:
             raise NotFound(detail=f'Category(id = {cat_id}) not found!')
@@ -196,7 +204,7 @@ class AdminCategoryView(ViewSet):
     def add_resource(self, request, cat_id):
         try:
             category = Category.objects.get(pk=cat_id)
-            seri = self.serializer_class(data=request.data)
+            seri = ResourceSerializer(data=request.data)
             if seri.is_valid():
                 resource = Resource(title=seri.validated_data.get('title'), \
                                     link=seri.validated_data.get('link'),
@@ -211,7 +219,7 @@ class AdminCategoryView(ViewSet):
         try:
             category = Category.objects.get(pk=cat_id)
             resources = list(category.resources.all())
-            seri = self.serializer_class(resources, many=True)
+            seri = ResourceSerializer(resources, many=True)
             return Response(data=seri.data, status=status.HTTP_200_OK)
         except Category.DoesNotExist:
             raise NotFound(detail=f'Category(id = {cat_id}) not found!')
@@ -219,6 +227,7 @@ class AdminCategoryView(ViewSet):
 class AdminResourceView(ViewSet):
 
     authentication_classes = [TokenAuthentication]
+    permissions_classes = [IsAdminUser]
     serializer_class = ResourceSerializer
 
     def update_resource(self, request, res_id):
@@ -246,6 +255,7 @@ class AdminHomeWorkView(ViewSet):
 
     queryset = HomeWork.objects.all()
     authentication_classes = [TokenAuthentication]
+    permissions_classes = [IsAdminUser]
     serializer_class = HomeWorkSerializer
     update_serializer_class = HomeWorkPartialUpdateSerializer
     grade_serializer_class = GradeSerializer

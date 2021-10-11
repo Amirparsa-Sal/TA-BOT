@@ -31,7 +31,11 @@ member_category_root = MemberCategoryView.as_view({
     'get': 'get_all_categories'
 })
 
-admin_category_with_id = AdminCategoryView.as_view({
+admin_category_root = AdminCategoryView.as_view({
+    'get': 'get_all_categories'
+})
+
+admin_category_toggle_status = AdminCategoryView.as_view({
     'put': 'change_category_status'
 })
 
@@ -79,8 +83,9 @@ urlpatterns = [
     path('auth/logout/', logout),
     path('auth/last-login', last_login),
 
-    path('member/categories', member_category_root),
-    path('admin/categories/<int:cat_id>/', admin_category_with_id),
+    path('member/categories/', member_category_root),
+    path('admin/categories/', admin_category_root),
+    path('admin/categories/<int:cat_id>/toggle-status/', admin_category_toggle_status),
     path('admin/categories/<int:cat_id>/resources/', admin_category_resources),
 
     path('admin/resources/<int:res_id>/', admin_resource_with_id),
