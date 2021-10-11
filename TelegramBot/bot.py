@@ -35,11 +35,11 @@ bot = telegram.Bot(TOKEN)
 MEMBER_LOGGED_IN, ADMIN_LOGGED_IN, NOT_LOGGED_IN, \
 REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWORD, \
 REGISTER_ADMIN_ENTER_EMAIL, REGISTER_ADMIN_ENTER_SECRET, \
-ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWORKS_TITLE, ADMIN_HOMEWORKS_FILE, \
-ADMIN_HOMEWORKS_DUE_DATE, ADMIN_HOMEWORKS_DUE_TIME, \
+ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWORKS_TITLE, ADMIN_HOMEWORKS_FILE, ADMIN_HOMEWORKS_DUE_DATE,\
 ADMIN_UPDATE_GRADE_ENTER_LINK, \
+ADMIN_GET_TIMELINE, ADMIN_EACH_TIMELINE_CATEGORY, \
 ADMIN_CONFIRMATION_STATE, \
-MEMBER_TIMELINE = range(19)
+MEMBER_TIMELINE = range(20)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
@@ -120,6 +120,27 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
     if text == 'Homeworks':
         update.message.reply_text(text='You are in homeworks section.', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
         return ADMIN_HOMEWORKS_MAIN
+    elif text == 'Timeline':
+        response, status = get_with_auth(ApiUrls.ADMIN_CATEGORY_ROOT.value, token)
+        if status != 200:
+            update.message.reply_text(text='Oops! Something went wrong!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        
+        # Creating buttons using retrieved homeworks and store homeworks id in local storage to use later.
+        if len(response) == 0:
+            update.message.reply_text(text='Timeline is not available!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            return ADMIN_LOGGED_IN
+        
+        keyboard_buttons = []
+        context.user_data['categories'] = dict()
+        for i,cat in enumerate(response):
+            keyboard_buttons.append(f"{i+1}) {cat['title']} {'✅' if cat['is_taught'] else '❌'}")
+            context.user_data['categories'][f"{i+1}) {cat['title']}"] = cat['id']
+
+        keyboard = create_vertical_keyboard_with_cancel_button(keyboard_buttons)
+        update.message.reply_text(text='You are in timeline section. which category do you want to change?', reply_markup=keyboard)
+        return ADMIN_GET_TIMELINE
+
     # Logout user
     elif text == 'Logout':
         chat_id = update.effective_chat.id
@@ -158,7 +179,7 @@ def member_logged_in(update: telegram.Update, context: telegram.ext.CallbackCont
         if status != 200:
             update.message.reply_text(text='Oops! Something went wrong!', reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_LOGGED_IN
-
+        
         del context.user_data['token']
         update.message.reply_text(text='You logged out successfully!', reply_markup=NOT_LOGGED_IN_KEYBOARD)
         return NOT_LOGGED_IN
@@ -485,6 +506,33 @@ def admin_homeworks_due_date(update: telegram.Update, context: telegram.ext.Call
         update.message.reply_text(text='Homework created successfully!', reply_markup=ADMIN_HOMEWORKS_MAIN_KEYBOARD)
         return ADMIN_HOMEWORKS_MAIN
 
+def admin_get_timeline(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    categories = context.user_data['categories']
+    # Save selected category id in local storage to use it later in requests.
+    if text[:-2] in categories.keys():
+        context.user_data['selected_cat_id'] = categories[text[:-2]]
+        update.message.reply_text(f'What do you want to do with this category?', reply_markup=ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD)
+        return ADMIN_EACH_TIMELINE_CATEGORY
+
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!')
+    return ADMIN_GET_TIMELINE
+
+def admin_each_timeline_category(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    token = context.user_data['token']
+    if text == 'Change Status':
+        selected_cat_id = context.user_data['selected_cat_id']
+        response, status = put_with_auth(ApiUrls.ADMIN_CATEGORY_TOGGLE_STATUS.value.format(id=selected_cat_id), token)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD)
+            return ADMIN_EACH_TIMELINE_CATEGORY
+        update.message.reply_text(text=f"Category status changed to {'✅' if response['is_taught'] else '❌'}", reply_markup=ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD)
+        return ADMIN_EACH_TIMELINE_CATEGORY
+    update.message.reply_text(text='Sorry I didnt understand!')
+    return ADMIN_EACH_TIMELINE_CATEGORY
+
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
         states={
@@ -516,6 +564,10 @@ conv_handler = ConversationHandler(
             ADMIN_HOMEWORKS_DUE_DATE: [MessageHandler((Filters.text & ~ Filters.command), admin_homeworks_due_date)],
             ADMIN_UPDATE_GRADE_ENTER_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_update_grade_enter_link)],
 
+            # ADMIN_TIMELINE
+            ADMIN_GET_TIMELINE: [MessageHandler((Filters.text & ~ Filters.command), admin_get_timeline)],
+            ADMIN_EACH_TIMELINE_CATEGORY: [MessageHandler((Filters.text & ~ Filters.command), admin_each_timeline_category)],
+            
             ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
             
         },

@@ -48,3 +48,6 @@ ADMIN_EACH_HW_KEYBOARD = ReplyKeyboardMarkup(
     ['/cancel']   
     ]
 )
+
+# ADMIN TIMELINE KEYBOARDS
+ADMIN_TIMELINE_CHANGE_STATUS_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Change Status'])

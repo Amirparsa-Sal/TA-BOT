@@ -35,6 +35,11 @@ class ApiUrls(Enum):
     ADMIN_HOMEWORK_GRADE_PUBLISH = ADMIN_BASE_URL + 'homeworks/{id}/grade/publish/'
     ADMIN_HOMEWORK_GRADE_UNPUBLISH = ADMIN_BASE_URL + 'homeworks/{id}/grade/unpublish/'
 
+    # Admin Category
+    ADMIN_CATEGORY_ROOT = ADMIN_BASE_URL + 'categories/'
+    ADMIN_CATEGORY_TOGGLE_STATUS = ADMIN_BASE_URL + 'categories/{id}/toggle-status/'
+    ADMIN_CATEGORY_RESOURCES = ADMIN_BASE_URL + 'categories/{id}/resources/'
+
 def post(url, **kwargs):
     '''Posts data with request body.'''
     # Creating request body
@@ -149,5 +154,5 @@ def multipart_form_data(url, auth_token, body:dict, method ='POST', file_address
     
     if file:
         file.close()
-        
+
     return response.json() if response.content else None, response.status_code
