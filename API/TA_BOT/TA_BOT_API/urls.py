@@ -45,7 +45,8 @@ admin_category_resources = AdminCategoryView.as_view({
 })
 
 admin_resource_with_id = AdminResourceView.as_view({
-    'put': 'update_resource',
+    'get': 'get_resource',
+    'patch': 'update_resource',
     'delete': 'delete_resource'
 })
 

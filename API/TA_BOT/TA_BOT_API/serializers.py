@@ -40,6 +40,10 @@ class ResourceSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['category']
 
+class ResourcePartialUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False)
+    link = serializers.CharField(required=False)
+
 class HomeWorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = HomeWork

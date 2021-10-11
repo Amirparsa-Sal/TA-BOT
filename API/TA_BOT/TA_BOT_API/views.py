@@ -14,7 +14,7 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
-from .serializers import GradeSerializer, UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
+from .serializers import GradeSerializer, ResourcePartialUpdateSerializer, UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
     ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer \
 
 from .models import AuthData, Category, Grade, TelegramActiveSessions, Resource, HomeWork
@@ -230,17 +230,25 @@ class AdminResourceView(ViewSet):
     permissions_classes = [IsAdminUser]
     serializer_class = ResourceSerializer
 
+    def get_resource(self, request, res_id):
+        try:
+            res = Resource.objects.get(pk=res_id)
+            seri = self.serializer_class(res)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Resource.DoesNotExist:
+            raise NotFound(detail=f'Resource(id = {res_id}) not found!')
+
     def update_resource(self, request, res_id):
         try:
             res = Resource.objects.get(pk=res_id)
-            seri = self.serializer_class(data=request.data)
+            seri = ResourcePartialUpdateSerializer(data=request.data)
             if seri.is_valid():
-                res.title = seri.validated_data.get('title')
-                res.link = seri.validated_data.get('link')
+                res.title = seri.validated_data.get('title', res.title)
+                res.link = seri.validated_data.get('link', res.link)
                 res.save()
                 return Response(data=seri.data, status=status.HTTP_200_OK)
             raise ValidationError(detail='The data is not valid!')
-        except:
+        except Resource.DoesNotExist:
             raise NotFound(detail=f'Resource(id = {res_id}) not found!')
 
     def delete_resource(self, request, res_id):
@@ -248,7 +256,7 @@ class AdminResourceView(ViewSet):
             res = Resource.objects.get(pk=res_id)
             res.delete()
             return Response(data=None, status=status.HTTP_200_OK)
-        except:
+        except Resource.DoesNotExist:
             raise NotFound(detail=f'Resource(id = {res_id}) not found!')
 
 class AdminHomeWorkView(ViewSet):
