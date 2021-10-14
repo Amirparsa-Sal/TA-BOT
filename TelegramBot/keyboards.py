@@ -24,7 +24,7 @@ NOT_LOGGED_IN_KEYBOARD = create_vertical_keyboard(['Register', 'Login'])
 ADMIN_MAIN_KEYBOARD = create_vertical_keyboard(['Homeworks', 'Timeline & Resources', 'Send Notifications', \
                                                 'Incoming Notifications', 'Logout'])
 
-MEMBER_MAIN_KEYBOARD = create_vertical_keyboard(['Ask Question', 'Homeworks', 'Resources', 'Timeline', 'Logout'])
+MEMBER_MAIN_KEYBOARD = create_vertical_keyboard(['Ask Question', 'Homeworks', 'Grades', 'Resources', 'Timeline', 'Logout'])
 
 CANCEL_KEYBOARD = create_vertical_keyboard_with_cancel_button([])
 

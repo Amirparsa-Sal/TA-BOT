@@ -3,6 +3,7 @@ from os import stat_result
 from django.http import response
 import telegram
 from telegram import replymarkup
+from telegram import message
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
 import logging
 import environ
@@ -41,7 +42,7 @@ ADMIN_GET_CATEGORIES, ADMIN_EACH_CATEGORY, \
 ADMIN_GET_RESOURCES, ADMIN_EACH_RESOURCE, ADMIN_RESOURCE_TITLE, ADMIN_RESOURCE_LINK, \
 ADMIN_INCOMIG_NOTIFS, \
 ADMIN_CONFIRMATION_STATE, \
-MEMBER_TIMELINE = range(25)
+MEMBER_GET_CATEGORIES, MEMBER_GET_HOMEWORKS, MEMBER_GET_HOMEWORKS_GRADE= range(27)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
@@ -169,15 +170,58 @@ def member_logged_in(update: telegram.Update, context: telegram.ext.CallbackCont
     token = context.user_data['token']
     # Navigate to timeline section
     if text == 'Timeline':
-        response, status = get_with_auth(ApiUrls.MEMBER_GET_CATEGORIES.value, token)
+        response, status = get_with_auth(ApiUrls.MEMBER_CATEGORY_ROOT.value, token)
         
         # Create message
         message = 'List of all course sections:\n\n'
-        for i, category in enumerate(response):
-            message += f"{i+1}) {category['title']} -> {'taught' if category['is_taught'] else 'not taught'}\n\n"
+        for i, cat in enumerate(response):
+            message += f"{i+1}) {cat['title']} {'✅' if cat['is_taught'] else '❌'}\n\n"
         
         update.message.reply_text(text=message, reply_markup=MEMBER_MAIN_KEYBOARD)
         return MEMBER_LOGGED_IN
+
+    # Navigate to resources section
+    elif text == 'Resources':
+        response, status = get_with_auth(ApiUrls.MEMBER_CATEGORY_ROOT.value, token)
+        if status != 200:
+            update.message.reply_text(text='Oops! Something went wrong!', reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+        
+        # Creating buttons using retrieved homeworks and store homeworks id in local storage to use later.
+        if len(response) == 0:
+            update.message.reply_text(text='Resources are not available right now!', reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+        
+        keyboard_buttons = []
+        context.user_data['categories'] = dict()
+        for i,cat in enumerate(response):
+            keyboard_buttons.append(f"{i+1}) {cat['title']} {'✅' if cat['is_taught'] else '❌'}")
+            context.user_data['categories'][f"{i+1}) {cat['title']}"] = cat['id']
+
+        keyboard = create_vertical_keyboard_with_cancel_button(keyboard_buttons)
+        update.message.reply_text(text='You are in resources section. Please select the category to get the resources.', reply_markup=keyboard)
+        return MEMBER_GET_CATEGORIES
+
+    # Navigate to homeworks or grades
+    elif text == 'Homeworks' or text == 'Grades':
+        # Sending request to get all available homeworks
+        response, status = get_with_auth(ApiUrls.MEMBER_HOMEWORK_ROOT.value, token)
+        
+        # Creating buttons using retrieved homeworks and store homeworks id in local storage to use later.
+        if len(response) == 0:
+            update.message.reply_text(text='No homework available!', reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+        
+        keyboard_buttons = []
+        context.user_data['homeworks'] = dict()
+        for i,hw in enumerate(response):
+            keyboard_buttons.append(f"{i+1}) {hw['title']}")
+            context.user_data['homeworks'][f"{i+1}) {hw['title']}"] = hw['id']
+
+        keyboard = create_vertical_keyboard_with_cancel_button(keyboard_buttons)
+        update.message.reply_text(text='Please choose the homework you want.', reply_markup=keyboard)
+        return MEMBER_GET_HOMEWORKS if text == 'Homeworks' else MEMBER_GET_HOMEWORKS_GRADE
+
     # Logout user
     elif text == 'Logout':
         token = context.user_data['token']
@@ -704,6 +748,84 @@ def admin_incoming_notifs(update: telegram.Update, context: telegram.ext.Callbac
     update.message.reply_text(text='Sorry I didnt understand!')
     return ADMIN_GET_RESOURCES
     
+def member_get_categories(update: telegram.Update, context: telegram.ext.CallbackContext):
+    text = update.message.text
+    categories = context.user_data['categories']
+    # Save selected category id in local storage to use it later in requests.
+    if text[:-2] in categories.keys():
+        selected_cat_id = categories[text[:-2]]
+        token = context.user_data['token']
+        
+        # Find resources
+        response, status = get_with_auth(ApiUrls.MEMBER_CATEGORY_RESOURCES.value.format(id=selected_cat_id), token)
+        if status != 200:
+            update.message.reply_text(text='Oops! Something went wrong!', reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+        
+        if len(response) == 0:
+            update.message.reply_text(text='There is no resource available.', reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+
+        message = 'List of resources:\n\n'
+        for i, res in enumerate(response):
+            message += f'{i+1}) ({res.title})[{res.link}]\n'
+
+        update.message.reply_text(text=message, reply_markup=MEMBER_MAIN_KEYBOARD, parse_mode='Markdown')
+        return MEMBER_LOGGED_IN
+
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!', reply_markup=MEMBER_MAIN_KEYBOARD)
+    return MEMBER_LOGGED_IN
+
+def member_get_homeworks(update: telegram.Update, context: telegram.ext.CallbackContext):
+    token = context.user_data['token']
+    text = update.message.text
+    homeworks = context.user_data['homeworks']
+    # Save selected hw id in local storage to use it later in requests.
+    if text in homeworks.keys():
+        selected_hw_id = homeworks[text]
+        response, status = get_with_auth(ApiUrls.MEMBER_HOMEWORK_WITH_ID.value.format(id=selected_hw_id), token)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+        # Creating message
+        message = f"Details of {response['title']}:\n\n \
+                    Deadline: {timestamp_to_jalali(response['due_date_time'])} \n\n \
+                    Homework file {'is' if response['file'] is not None else 'is not'} attached."
+        # Getting hw file if needed
+        if response['file'] is not None:
+            update.message.reply_text(text=message, parse_mode='Markdown', disable_web_page_preview=True)
+            update.message.reply_text(f'Uploading the HW file...', reply_markup=MEMBER_MAIN_KEYBOARD)
+            file_address = get_file(response['file'])
+            with open(file_address, 'rb') as file:
+                bot.send_document(chat_id=update.effective_chat.id, document=file)
+        else:
+            update.message.reply_text(text=message, reply_markup=MEMBER_MAIN_KEYBOARD)
+        return MEMBER_LOGGED_IN
+
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!', reply_markup=MEMBER_MAIN_KEYBOARD)
+    return MEMBER_LOGGED_IN
+
+def member_get_homeworks_grade(update: telegram.Update, context: telegram.ext.CallbackContext):
+    token = context.user_data['token']
+    text = update.message.text
+    homeworks = context.user_data['homeworks']
+    # Save selected hw id in local storage to use it later in requests.
+    if text in homeworks.keys():
+        selected_hw_id = homeworks[text]    
+        response, status = get_with_auth(ApiUrls.MEMBER_HOMEWORK_GRADES.value.format(id=selected_hw_id), token)
+        if status != 200:
+            update.message.reply_text(text=response['detail'], reply_markup=MEMBER_MAIN_KEYBOARD)
+            return MEMBER_LOGGED_IN
+        # Creating message
+        message = f"Here is the (link)[{response['link']}] of grades."
+        update.message.reply_text(text=message, reply_markup=MEMBER_MAIN_KEYBOARD, parse_mode='Markdown')
+        return MEMBER_LOGGED_IN
+    
+    # Stay at this state if the user enters shit
+    update.message.reply_text(text='Sorry I didnt understand!', reply_markup=MEMBER_MAIN_KEYBOARD)
+    return MEMBER_LOGGED_IN
 
 conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
@@ -745,10 +867,17 @@ conv_handler = ConversationHandler(
             ADMIN_RESOURCE_TITLE: [MessageHandler((Filters.text & ~ Filters.command), admin_resource_title)],
             ADMIN_RESOURCE_LINK: [MessageHandler((Filters.text & ~ Filters.command), admin_resource_link)],
 
+            # ADMIN NOTIFS
             ADMIN_INCOMIG_NOTIFS: [MessageHandler((Filters.text & ~ Filters.command), admin_incoming_notifs)],
 
-            ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
+            # MEMBER CATEGORIES
+            MEMBER_GET_CATEGORIES: [MessageHandler((Filters.text & ~ Filters.command), member_get_categories)],
+
+            # MEMBER HOMEWORKS
+            MEMBER_GET_HOMEWORKS: [MessageHandler((Filters.text & ~ Filters.command), member_get_homeworks)],
+            MEMBER_GET_HOMEWORKS_GRADE: [MessageHandler((Filters.text & ~ Filters.command), member_get_homeworks_grade)],
             
+            ADMIN_CONFIRMATION_STATE: [MessageHandler((Filters.text & ~ Filters.command), admin_confirmation_state)]
         },
         fallbacks=[MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
         allow_reentry=False

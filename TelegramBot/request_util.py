@@ -24,7 +24,13 @@ class ApiUrls(Enum):
 
     MEMBER_BASE_URL = BASE_API_URL + 'member/'
     # Member Categories
-    MEMBER_GET_CATEGORIES = MEMBER_BASE_URL + 'categories'
+    MEMBER_CATEGORY_ROOT = MEMBER_BASE_URL + 'categories/'
+    MEMBER_CATEGORY_RESOURCES = MEMBER_BASE_URL + 'categories/{id}/resources'
+
+    # Member Homeworks
+    MEMBER_HOMEWORK_ROOT = MEMBER_BASE_URL + 'homeworks/'
+    MEMBER_HOMEWORK_WITH_ID = MEMBER_BASE_URL + 'homeworks/{id}'
+    MEMBER_HOMEWORK_GRADES = MEMBER_BASE_URL + 'homeworks/{id}/grades'
 
     ###### Admin Urls
     ADMIN_BASE_URL = BASE_API_URL + 'admin/'
