@@ -174,11 +174,21 @@ class MemberCategoryView(ViewSet):
 
     authentication_classes = [TokenAuthentication]
     serializer_class = CategorySerilizer
+    resource_serializer_class = ResourceSerializer
 
     def get_all_categories(self, request):
         categories = Category.objects.all()
         seri = self.serializer_class(categories, many=True)
         return Response(data=seri.data, status=status.HTTP_200_OK)
+
+    def get_resources(self, request, cat_id):
+        try:
+            category = Category.objects.get(pk=cat_id)
+            resources = list(category.resources.all())
+            seri = ResourceSerializer(resources, many=True)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            raise NotFound(detail=f'Category(id = {cat_id}) not found!')
 
 class AdminCategoryView(ViewSet):
     
@@ -350,7 +360,7 @@ class AdminHomeWorkView(ViewSet):
             hw = HomeWork.objects.get(pk=hw_id)
             grade = hw.grade
             if grade is None:
-                return NotFound(details=f'There is no grade for this hw!')
+                raise NotFound(detail=f'There is no grade for this hw!')
             seri = self.grade_serializer_class(grade)
             return Response(data=seri.data, status=status.HTTP_200_OK)
         except HomeWork.DoesNotExist:
@@ -360,7 +370,7 @@ class AdminHomeWorkView(ViewSet):
         try:
             hw = HomeWork.objects.get(pk=hw_id)
             if hw.grade is None:
-                return NotFound(details=f'There is no grade for this hw!')
+                raise NotFound(detail=f'There is no grade for this hw!')
             hw.grade.published = True
             hw.grade.save()
             return Response(data=None, status=status.HTTP_200_OK)
@@ -371,12 +381,43 @@ class AdminHomeWorkView(ViewSet):
         try:
             hw = HomeWork.objects.get(pk=hw_id)
             if hw.grade is None:
-                return NotFound(details=f'There is no grade for this hw!')
+                raise NotFound(detail=f'There is no grade for this hw!')
             hw.grade.published = False
             hw.grade.save()
             return Response(data=None, status=status.HTTP_200_OK)
         except HomeWork.DoesNotExist:
             raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+class MemberHomeworkView(ViewSet):
+
+    authentication_classes = [TokenAuthentication]
+    serializer_class = HomeWorkSerializer
+    grade_serializer_class = GradeSerializer
+
+    def get_published_homeworks(self, request):
+        homeworks = HomeWork.objects.filter(published=True)
+        seri = self.serializer_class(homeworks, many=True)
+        return Response(data=seri.data, status=status.HTTP_200_OK)
+
+    def get_homework(self, request, hw_id=None):
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            seri = self.serializer_class(hw)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+
+    def get_grade(self, request, hw_id):
+        try:
+            homework = HomeWork.objects.get(pk=hw_id)
+            grade_serializer_class = GradeSerializer
+            grade = homework.grade
+            if grade is None or not grade.published:
+                raise NotFound(detail=f'There is no grade for this hw!')
+            seri = self.grade_serializer_class(grade)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'Homework(id = {hw_id}) not found!')
 
 class AdminNotificationsView(ViewSet):
     

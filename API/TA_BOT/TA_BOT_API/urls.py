@@ -3,7 +3,8 @@ from django.urls import path, include
 
 from rest_framework.routers import DefaultRouter
 
-from .views import AuthView, CustomAuthToken, MemberCategoryView,AdminCategoryView,AdminResourceView,AdminHomeWorkView,AdminNotificationsView
+from .views import AuthView, CustomAuthToken, MemberCategoryView, AdminCategoryView, \
+    AdminResourceView, AdminHomeWorkView, AdminNotificationsView, MemberHomeworkView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -29,6 +30,10 @@ last_login = AuthView.as_view({
 
 member_category_root = MemberCategoryView.as_view({
     'get': 'get_all_categories'
+})
+
+member_category_resources = MemberCategoryView.as_view({
+    'get': 'get_resources'
 })
 
 admin_category_root = AdminCategoryView.as_view({
@@ -88,6 +93,18 @@ admin_get_notif_status = AdminNotificationsView.as_view({
     'get': 'get_incoming_notif_status'
 })
 
+member_homework_root = MemberHomeworkView.as_view({
+    'get': 'get_published_homeworks'
+})
+
+member_homework_with_id = MemberHomeworkView.as_view({
+    'get': 'get_homework'
+})
+
+member_homework_grades = MemberHomeworkView.as_view({
+    'get': 'get_grade'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
@@ -112,4 +129,11 @@ urlpatterns = [
     path('admin/incoming-notifs/status/', admin_get_notif_status),
     path('admin/incoming-notifs/enable/', admin_notification_enable),
     path('admin/incoming-notifs/disable/', admin_notification_disable),
+
+    path('member/categories/', member_category_root),
+    path('member/categories/<int:cat_id>/resources', member_category_resources),
+    
+    path('member/homeworks/', member_homework_root),
+    path('member/homeworks/<int:hw_id>', member_homework_with_id),
+    path('member/homeworks/<int:hw_id>/grades', member_homework_grades),
 ]
