@@ -68,7 +68,7 @@ class BotMetaDataView(ViewSet):
         return Response(data=chat_id_list, status=status.HTTP_200_OK)
     
     def get_all_students_sessions(self, request):
-        active_sessions = TelegramActiveSessions.objects.filter(is_staff=False)
+        active_sessions = TelegramActiveSessions.objects.filter(user__is_staff=False)
         chat_id_list = [session.chat_id for session in active_sessions]
         return Response(data=chat_id_list, status=status.HTTP_200_OK)
 
