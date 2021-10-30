@@ -1,9 +1,13 @@
 from os import stat
 from django.contrib import auth
 from django.contrib.auth import get_user_model
+from django.core.checks import messages
 from django.core.mail import send_mail
+from django.db.models.query_utils import Q
 from django.utils.crypto import get_random_string
 from django.conf import settings
+from django.views.generic.base import View
+from django.db.models import Q
 
 from rest_framework import serializers, status
 from rest_framework import permissions
@@ -14,15 +18,18 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
-from .serializers import GradeSerializer, ResourcePartialUpdateSerializer, UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
+
+from .serializers import AnswerSerializer, ChatIdMessageIdSerializer, GradeSerializer, QuestionAnswerSerializer, QuestionSerializer, ResourcePartialUpdateSerializer, UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
     ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer \
 
-from .models import AuthData, Category, Grade, TelegramActiveSessions, Resource, HomeWork
+from .models import AuthData, Category, Grade, QuestionAnswer, TelegramActiveSessions, Resource, HomeWork
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
 
 from smtplib import SMTPException
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
+
+from django.db import transaction
 
 import redis
 
@@ -32,6 +39,40 @@ secret = getattr(settings, 'SECRET_KEY', 'thikiuridi')
 
 from rest_framework.authtoken.models import Token
 
+class BotMetaDataView(ViewSet):
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdminUser]
+
+    def get_last_login(self, request):
+        chat_id = request.GET.get('chat_id', None)
+        if chat_id is None:
+            raise ValidationError(detail='chat_id is not in request params!')
+
+        # Delete chat_id from user sessions
+        try:
+            active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+            token = Token.objects.get(user=active_session.user)
+            return Response(data={'token': token.key, 'is_admin':active_session.user.is_staff}, status=status.HTTP_200_OK) 
+        except TelegramActiveSessions.DoesNotExist:
+            return Response(data={'token': None}, status=status.HTTP_200_OK)
+
+    def get_all_active_sessions(self, request):
+        user_id = request.GET.get('user_id', None)
+        if user_id is None:
+            raise ValidationError(detail='user_id is not in request params!')
+
+        # Find all active sessions
+        active_sessions = TelegramActiveSessions.objects.filter(user__id=user_id)
+        chat_id_list = [session.chat_id for session in active_sessions]
+        return Response(data=chat_id_list, status=status.HTTP_200_OK)
+    
+    def get_all_students_sessions(self, request):
+        active_sessions = TelegramActiveSessions.objects.filter(is_staff=False)
+        chat_id_list = [session.chat_id for session in active_sessions]
+        return Response(data=chat_id_list, status=status.HTTP_200_OK)
+
+    
 class CustomAuthToken(ObtainAuthToken):
     ''' A view for login users.\n
         /api/auth/login (POST)
@@ -154,20 +195,6 @@ class AuthView(ViewSet):
             return Response(data={}, status=status.HTTP_200_OK) 
         
         raise ValidationError(detail='The data is not valid!')
-    
-    def get_last_login(self, request):
-        chat_id = request.GET.get('chat_id', None)
-
-        if chat_id is None:
-            raise ValidationError(detail='chat_id is not in request params!')
-
-        # Delete chat_id from user sessions
-        try:
-            active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
-            token = Token.objects.get(user=active_session.user)
-            return Response(data={'token': token.key, 'is_admin':active_session.user.is_staff}, status=status.HTTP_200_OK) 
-        except TelegramActiveSessions.DoesNotExist:
-            return Response(data={'token': None}, status=status.HTTP_200_OK)
         
 
 class MemberCategoryView(ViewSet):
@@ -175,6 +202,9 @@ class MemberCategoryView(ViewSet):
     authentication_classes = [TokenAuthentication]
     serializer_class = CategorySerilizer
     resource_serializer_class = ResourceSerializer
+    question_serializer_class = QuestionSerializer
+    question_answer_serializer_class =QuestionAnswerSerializer
+    
 
     def get_all_categories(self, request):
         categories = Category.objects.all()
@@ -189,6 +219,20 @@ class MemberCategoryView(ViewSet):
             return Response(data=seri.data, status=status.HTTP_200_OK)
         except Category.DoesNotExist:
             raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+
+    @transaction.atomic
+    def add_question(self, request, cat_id):
+        seri = self.question_serializer_class(data=request.data)
+        if seri.is_valid():
+            try:
+                category = Category.objects.get(pk=cat_id)
+                question_answer = QuestionAnswer(question=seri.validated_data['question'], source_chat_id=seri.validated_data['chat_id'], user=request.user, category=category)
+                question_answer.save()
+                seri = self.question_answer_serializer_class(question_answer)
+                return Response(data=seri.data, status=status.HTTP_200_OK)
+            except Category.DoesNotExist:
+                raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+        raise ValidationError(detail=seri.errors)
 
 class AdminCategoryView(ViewSet):
     
@@ -451,3 +495,122 @@ class AdminNotificationsView(ViewSet):
             return Response(data=None, status=status.HTTP_200_OK)
         except:
             raise NotFound('User telegram session not found!')
+
+    def find_admins_to_send_notif(self, request):
+        admins = TelegramActiveSessions.objects.filter(allow_notif=True, user__is_staff=True)
+        chat_id_list = [admin.chat_id for admin in admins]
+        return Response(data=chat_id_list, status=status.HTTP_200_OK)
+
+class AdminQuestionAnswerView(ViewSet):
+
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAdminUser]
+    answer_serializer = AnswerSerializer
+    question_update_message_serializer = ChatIdMessageIdSerializer
+    question_answer_serializer = QuestionAnswerSerializer
+
+    def get_question(self, request, q_id=None):
+        try:
+            question = QuestionAnswer.objects.get(pk=q_id)
+            seri = self.question_answer_serializer(question)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except QuestionAnswer.DoesNotExist:
+            return NotFound(detail=f'Question id={q_id} not found!')
+
+    def get_all_questions(self, request):
+        answered = request.GET.get('answered', False)
+        questions = None
+        print(answered)
+        if answered == 'True':
+            print('.')
+            questions = QuestionAnswer.objects.filter(~Q(answer=''))
+        else:
+            print('*')
+            questions = QuestionAnswer.objects.filter(answer='')
+        seri = self.question_answer_serializer(questions, many=True)
+        return Response(data=seri.data, status=status.HTTP_200_OK)
+
+    def answer_question(self, request, q_id=None):
+        seri = self.answer_serializer(data=request.data)
+        if seri.is_valid():
+            question = QuestionAnswer.objects.get(pk=q_id)
+            answer = seri.validated_data.get('answer')    
+            question.answer = answer
+            question.save()
+            seri = self.question_answer_serializer(question)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        raise ValidationError(detail=seri.errors)
+
+    @transaction.atomic
+    def update_question_message(self, request, q_id):
+        seri = self.question_update_message_serializer(data=request.data, many=True)
+        if seri.is_valid():
+            try:
+                QuestionAnswer.objects.get(pk=q_id)
+
+                for data in seri.validated_data:
+                    chat_id = data['chat_id']
+                    message_id = data['message_id']
+
+                    # Check if the chat_id is added before
+                    all_questions = redis_instance.get(f"{chat_id}")
+                    if all_questions is None:
+                        redis_instance.set(f"{chat_id}", '')
+                        all_questions = b''
+                    all_questions = all_questions.decode('utf-8')
+                    key = f"{chat_id};{q_id}"
+                    # If the question is added before
+                    if f"{message_id}" in all_questions:
+                        message_id_list = redis_instance.get(key).decode('utf-8')
+                        if f"{message_id}" not in message_id_list:
+                            redis_instance.set(key, f"{message_id_list}{message_id}|")
+                    else:
+                        redis_instance.set(f"{chat_id}", all_questions + f"{message_id}|")
+                        redis_instance.set(key, f"{message_id}|")
+
+                    redis_instance.set(f"{chat_id}|{message_id}", f'{q_id}')
+
+
+                return Response(data=None, status=status.HTTP_200_OK)
+
+            except QuestionAnswer.DoesNotExist:
+                raise NotFound(detail=f'Question(id = {q_id}) not found!')
+
+        raise ValidationError(detail=seri.errors)
+
+    def get_questions_in_chat(self, request):
+        chat_id = request.GET.get('chat_id', None)
+        if chat_id is None:
+            raise ValidationError('Chat id must be sent');
+
+        message_id_list = redis_instance.get(chat_id)
+        if message_id_list is None:
+            return Response(data=[], status=status.HTTP_200_OK)
+        
+        output = dict()
+        message_id_list = message_id_list.decode('utf-8').split('|')
+        print(message_id_list)
+        for i in range(len(message_id_list) - 1):
+            message_id = message_id_list[i]
+            question_id = redis_instance.get(f"{chat_id}|{message_id}")
+            output[message_id] = int(question_id.decode('utf-8'))
+
+        return Response(data=output, status=status.HTTP_200_OK)
+
+class MemberQuestionAnswerView(ViewSet):
+    authentication_classes = [TokenAuthentication]
+    serializer_class = QuestionAnswerSerializer
+
+    def get_question_answer(self, request, q_id):
+        try:
+            question_answer = QuestionAnswer.objects.get(pk=q_id)
+            seri =  self.serializer_class(question_answer)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+            
+        except QuestionAnswer.DoesNotExist:
+            raise NotFound(detail=f'Question(id= {q_id}) not found!')
+
+    def get_my_questions(self, request):
+        questions = QuestionAnswer.objects.filter(user=request.user)
+        seri = self.serializer_class(questions, many=True)
+        return Response(data=seri.data, status=status.HTTP_200_OK)

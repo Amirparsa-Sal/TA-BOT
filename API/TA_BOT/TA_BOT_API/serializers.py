@@ -1,8 +1,9 @@
+from django.core.checks import messages
 from django.core.validators import MinLengthValidator, validate_integer
 from django.db.models import fields
 from rest_framework import serializers
 from django.core.validators import MinLengthValidator,MaxLengthValidator,DecimalValidator
-from .models import Category, HomeWork, Resource, Grade
+from .models import Category, HomeWork, QuestionAnswer, Resource, Grade
 
 class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
@@ -61,3 +62,23 @@ class GradeSerializer(serializers.ModelSerializer):
         model = Grade
         fields = '__all__'
         read_only_fields = ['id']
+
+class QuestionAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QuestionAnswer
+        fields = '__all__'
+        read_only_fields = ['id']
+
+class ChatIdMessageIdSerializer(serializers.Serializer):
+    chat_id = serializers.IntegerField()
+    message_id = serializers.IntegerField()
+
+class ChatIdSerializer(serializers.Serializer):
+    chat_id = serializers.IntegerField()
+
+class QuestionSerializer(serializers.Serializer):
+    question = serializers.CharField()
+    chat_id = serializers.IntegerField()
+
+class AnswerSerializer(serializers.Serializer):
+    answer = serializers.CharField()

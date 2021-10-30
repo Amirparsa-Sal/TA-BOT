@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.core.validators import MinLengthValidator
+from django.db.models.base import Model
 
 # Create your models here.
 
@@ -77,3 +78,11 @@ class HomeWork(models.Model):
     grade = models.OneToOneField(Grade, on_delete=models.SET_NULL, null=True)
     due_date_time = models.DateTimeField()
     published = models.BooleanField(default=False)
+
+class QuestionAnswer(models.Model):
+    user = models.ForeignKey(User, null=False, on_delete=models.CASCADE)
+    question = models.TextField(blank=False)
+    answer = models.TextField(blank=True)
+    category = models.ForeignKey(Category, null=False, on_delete=models.CASCADE)
+    views = models.PositiveIntegerField(default=0)
+    source_chat_id = models.BigIntegerField()

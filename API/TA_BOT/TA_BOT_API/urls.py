@@ -2,9 +2,11 @@ from django.contrib import admin
 from django.urls import path, include
 
 from rest_framework.routers import DefaultRouter
+from telegram.bot import Bot
 
-from .views import AuthView, CustomAuthToken, MemberCategoryView, AdminCategoryView, \
-    AdminResourceView, AdminHomeWorkView, AdminNotificationsView, MemberHomeworkView
+from .views import AdminQuestionAnswerView, AuthView, CustomAuthToken, MemberCategoryView, AdminCategoryView, \
+    AdminResourceView, AdminHomeWorkView, AdminNotificationsView, MemberHomeworkView, \
+    BotMetaDataView, MemberQuestionAnswerView
 
 # Auth urls
 auth_send_otp = AuthView.as_view({
@@ -23,9 +25,18 @@ logout = AuthView.as_view({
     'post': 'logout'
 })
 
-last_login = AuthView.as_view({
+last_login = BotMetaDataView.as_view({
     'get': 'get_last_login'
 })
+
+active_sessions = BotMetaDataView.as_view({
+    'get': 'get_all_active_sessions'
+})
+
+all_student_sessions = BotMetaDataView.as_view({
+    'get': 'get_all_students_sessions'
+})
+
 # Member Category urls
 
 member_category_root = MemberCategoryView.as_view({
@@ -34,6 +45,10 @@ member_category_root = MemberCategoryView.as_view({
 
 member_category_resources = MemberCategoryView.as_view({
     'get': 'get_resources'
+})
+
+member_category_questions = MemberCategoryView.as_view({
+    'post': 'add_question'
 })
 
 admin_category_root = AdminCategoryView.as_view({
@@ -93,6 +108,10 @@ admin_get_notif_status = AdminNotificationsView.as_view({
     'get': 'get_incoming_notif_status'
 })
 
+admin_notif_get_all = AdminNotificationsView.as_view({
+    'get': 'find_admins_to_send_notif'
+})
+
 member_homework_root = MemberHomeworkView.as_view({
     'get': 'get_published_homeworks'
 })
@@ -105,13 +124,44 @@ member_homework_grades = MemberHomeworkView.as_view({
     'get': 'get_grade'
 })
 
+admin_question_answer_update = AdminQuestionAnswerView.as_view({
+    'put': 'update_redis'
+})
+
+admin_answer_question = AdminQuestionAnswerView.as_view({
+    'put': 'answer_question'
+})
+
+admin_question_answer_with_id = AdminQuestionAnswerView.as_view({
+    'put': 'update_question_message',
+    'get': 'get_question'
+})
+
+admin_chat_question_data = AdminQuestionAnswerView.as_view({
+    'get': 'get_questions_in_chat'
+})
+
+admin_question_answer_root = AdminQuestionAnswerView.as_view({
+    'get': 'get_all_questions'
+})
+
+member_question_answer_with_id = MemberQuestionAnswerView.as_view({
+    'get': 'get_question_answer'
+})
+
+member_my_questions = MemberQuestionAnswerView.as_view({
+    'get': 'get_my_questions'
+})
+
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
     path('auth/activate-account/', account_activition),
     path('auth/register-admin/', register_admin),
     path('auth/login/', CustomAuthToken.as_view()),
     path('auth/logout/', logout),
-    path('auth/last-login', last_login),
+    path('auth/last-login/', last_login),
+    path('auth/active-sessions/', active_sessions),
+    path('auth/all-students-sessions/', all_student_sessions),
 
     path('member/categories/', member_category_root),
     path('admin/categories/', admin_category_root),
@@ -129,11 +179,21 @@ urlpatterns = [
     path('admin/incoming-notifs/status/', admin_get_notif_status),
     path('admin/incoming-notifs/enable/', admin_notification_enable),
     path('admin/incoming-notifs/disable/', admin_notification_disable),
+    path('admin/incoming-notifs/admins/', admin_notif_get_all),
 
     path('member/categories/', member_category_root),
-    path('member/categories/<int:cat_id>/resources', member_category_resources),
+    path('member/categories/<int:cat_id>/resources/', member_category_resources),
+    path('member/categories/<int:cat_id>/questions/', member_category_questions),
     
     path('member/homeworks/', member_homework_root),
-    path('member/homeworks/<int:hw_id>', member_homework_with_id),
-    path('member/homeworks/<int:hw_id>/grades', member_homework_grades),
+    path('member/homeworks/<int:hw_id>/', member_homework_with_id),
+    path('member/homeworks/<int:hw_id>/grades/', member_homework_grades),
+
+    path('admin/question-answer/<int:q_id>/answer/', admin_answer_question),
+    path('admin/question-answer/<int:q_id>/', admin_question_answer_with_id),
+    path('admin/question-answer/get-chat-data/', admin_chat_question_data),
+    path('admin/question-answer/', admin_question_answer_root),
+
+    path('member/question-answer/<int:q_id>/', member_question_answer_with_id),
+    path('member/question-answer/my-questions/', member_my_questions)
 ]
