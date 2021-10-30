@@ -21,10 +21,10 @@ def create_vertical_keyboard_with_cancel_button(buttons: Iterable):
 
 NOT_LOGGED_IN_KEYBOARD = create_vertical_keyboard(['Register', 'Login'])
 
-ADMIN_MAIN_KEYBOARD = create_vertical_keyboard(['Homeworks', 'Timeline & Resources', 'Send Notifications', \
+ADMIN_MAIN_KEYBOARD = create_vertical_keyboard(['Homeworks', 'Timeline & Resources', 'Questions', 'Send Notifications', \
                                                 'Incoming Notifications', 'Logout'])
 
-MEMBER_MAIN_KEYBOARD = create_vertical_keyboard(['Ask Question', 'Homeworks', 'Grades', 'Resources', 'Timeline', 'Logout'])
+MEMBER_MAIN_KEYBOARD = create_vertical_keyboard(['Questions', 'Homeworks', 'Grades', 'Resources', 'Timeline', 'Logout'])
 
 CANCEL_KEYBOARD = create_vertical_keyboard_with_cancel_button([])
 
@@ -62,3 +62,9 @@ ADMIN_INCOMING_NOTIFS_KEYBOARD = ReplyKeyboardMarkup(
     ],
     one_time_keyboard=True
 )
+
+# ADMIN QUESTIONS
+ADMIN_QUESTIONS_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Get All Unanswered Questions', 'Get All Answered Questions'])
+
+# MEMBER QUESTIONS
+MEMBER_QUESTIONS_KEYBOARD = create_vertical_keyboard_with_cancel_button(['Ask a Question', 'My Questions'])

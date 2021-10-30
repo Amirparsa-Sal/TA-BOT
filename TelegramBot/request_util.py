@@ -18,19 +18,22 @@ class ApiUrls(Enum):
     REGISTER_ADMIN = AUTH_BASE + 'register-admin/'
     LOGIN = AUTH_BASE + 'login/'
     LOGOUT = AUTH_BASE + 'logout/'
-    LAST_LOGIN = AUTH_BASE + 'last-login'
+    LAST_LOGIN = AUTH_BASE + 'last-login/'
+    ACTIVE_SESSIONS = AUTH_BASE + 'active-sessions/'
+    ALL_STUDENTS_SESSIONS = AUTH_BASE + 'all-students-sessions/'
 
     ###### Member Urls
 
     MEMBER_BASE_URL = BASE_API_URL + 'member/'
     # Member Categories
     MEMBER_CATEGORY_ROOT = MEMBER_BASE_URL + 'categories/'
-    MEMBER_CATEGORY_RESOURCES = MEMBER_BASE_URL + 'categories/{id}/resources'
+    MEMBER_CATEGORY_RESOURCES = MEMBER_BASE_URL + 'categories/{id}/resources/'
+    MEMBER_CATEGORY_ADD_QUESTION = MEMBER_BASE_URL + 'categories/{id}/questions/'
 
     # Member Homeworks
     MEMBER_HOMEWORK_ROOT = MEMBER_BASE_URL + 'homeworks/'
-    MEMBER_HOMEWORK_WITH_ID = MEMBER_BASE_URL + 'homeworks/{id}'
-    MEMBER_HOMEWORK_GRADES = MEMBER_BASE_URL + 'homeworks/{id}/grades'
+    MEMBER_HOMEWORK_WITH_ID = MEMBER_BASE_URL + 'homeworks/{id}/'
+    MEMBER_HOMEWORK_GRADES = MEMBER_BASE_URL + 'homeworks/{id}/grades/'
 
     ###### Admin Urls
     ADMIN_BASE_URL = BASE_API_URL + 'admin/'
@@ -53,6 +56,17 @@ class ApiUrls(Enum):
     ADMIN_INCOMING_NOTIF_STATUS  = ADMIN_BASE_URL + 'incoming-notifs/status/'
     ADMIN_INCOMING_NOTIF_ENABLE  = ADMIN_BASE_URL + 'incoming-notifs/enable/'
     ADMIN_INCOMING_NOTIF_DISABLE  = ADMIN_BASE_URL + 'incoming-notifs/disable/'
+    ADMIN_INCOMING_NOTIF_ADMINS = ADMIN_BASE_URL + 'incoming-notifs/admins/'
+
+    # ADMIN QUESTION ANSWER
+    ADMIN_QUESTION_ANSWER_ANSWER = ADMIN_BASE_URL + 'question-answer/{id}/answer/'
+    ADMIN_QUESTION_ANSWER_GET_DATA = ADMIN_BASE_URL + 'question-answer/get-chat-data/'
+    ADMIN_QUESTION_ANSWER_WITH_ID = ADMIN_BASE_URL + 'question-answer/{id}/'
+    ADMIN_QUESTION_ANSWER_ROOT = ADMIN_BASE_URL + 'question-answer/'
+
+    # MEMBER QUESTION ANSWER
+    MEMBER_QUESTION_ANSWER_WITH_ID = MEMBER_BASE_URL + 'question-answer/{id}/'
+    MEMBER_MY_QUEESTIONS = MEMBER_BASE_URL + 'question-answer/my-questions/'
 
 def post(url, **kwargs):
     '''Posts data with request body.'''
@@ -71,7 +85,7 @@ def post_with_auth(url, auth_token, **kwargs):
     for key,value in kwargs.items():
         data[key] = value
     # Sending the request
-    response = requests.post(url, data=data, headers={'Authorization':f'Token {auth_token}'})
+    response = requests.post(url, json=data, headers={'Authorization':f'Token {auth_token}'})
     return response.json() if response.content else None, response.status_code
 
 def get_with_auth(url, auth_token, **kwargs):
@@ -115,6 +129,12 @@ def get_file(relative_url):
     
     return f'downloads/{filename}'
 
+def patch_with_auth_and_body(url, auth_token, body:dict):
+    '''Sends a patch request with authorization token and takes the whole request body to send.'''
+    # Sending the request
+    response = requests.patch(url, data=body, headers={'Authorization':f'Token {auth_token}'})
+    return response.json() if response.content else None, response.status_code
+
 def patch_with_auth(url, auth_token, **kwargs):
     '''Sends a patch request with authorization token.'''
     # Creating request body
@@ -122,18 +142,15 @@ def patch_with_auth(url, auth_token, **kwargs):
     for key,value in kwargs.items():
         data[key] = value
     # Sending the request
-    response = requests.patch(url, data=data, headers={'Authorization':f'Token {auth_token}'})
-    return response.json() if response.content else None, response.status_code
-
-def patch_with_auth_and_body(url, auth_token, body:dict, **kwargs):
-    '''Sends a patch request with authorization token and takes the whole request body to send.'''
-    # Sending the request
-    response = requests.patch(url, data=body, headers={'Authorization':f'Token {auth_token}'})
-    return response.json() if response.content else None, response.status_code
+    return patch_with_auth_and_body(url, auth_token, data)
 
 def delete_with_auth(url, auth_token):
     '''Sends a delete request to url with authorization token.'''
     response = requests.delete(url, headers={'Authorization':f'Token {auth_token}'})
+    return response.json() if response.content else None, response.status_code
+
+def put_with_auth_and_body(url, auth_token, body):
+    response = requests.put(url, json=body, headers={'Authorization':f'Token {auth_token}'})
     return response.json() if response.content else None, response.status_code
 
 def put_with_auth(url, auth_token, **kwargs):
@@ -143,8 +160,7 @@ def put_with_auth(url, auth_token, **kwargs):
     for key,value in kwargs.items():
         data[key] = value
     # Sending the request
-    response = requests.put(url, data=data, headers={'Authorization':f'Token {auth_token}'})
-    return response.json() if response.content else None, response.status_code
+    return put_with_auth_and_body(url, auth_token, data)
 
 def multipart_form_data(url, auth_token, body:dict, method ='POST', file_address=None, file_field_name='file', **kwargs):
     multipart_form_data = dict()
