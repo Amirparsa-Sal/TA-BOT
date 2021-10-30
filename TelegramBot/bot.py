@@ -1,5 +1,5 @@
 from calendar import calendar
-from os import stat, stat_result
+from os import chflags, stat, stat_result
 from django.core.checks import messages
 from django.http import response
 import telegram
@@ -41,11 +41,11 @@ ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWOR
 ADMIN_UPDATE_GRADE_ENTER_LINK, \
 ADMIN_GET_CATEGORIES, ADMIN_EACH_CATEGORY, \
 ADMIN_GET_RESOURCES, ADMIN_EACH_RESOURCE, ADMIN_RESOURCE_TITLE, ADMIN_RESOURCE_LINK, \
-ADMIN_INCOMIG_NOTIFS, \
+ADMIN_INCOMIG_NOTIFS, ADMIN_SEND_NOTIF, \
 ADMIN_CONFIRMATION_STATE, \
 ADMIN_QUESTIONS, ADMIN_EACH_QUESTION, \
 MEMBER_GET_CATEGORIES, MEMBER_GET_HOMEWORKS, MEMBER_GET_HOMEWORKS_GRADE, MEMBER_ASK_QUESTION, \
-MEMBER_QUESTIONS_MAIN, MEMBER_MY_QUESTIONS = range(32)
+MEMBER_QUESTIONS_MAIN, MEMBER_MY_QUESTIONS = range(33)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
@@ -148,6 +148,10 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
     elif text == 'Questions':
         update.message.reply_text(text='You are in questions section!', reply_markup=ADMIN_QUESTIONS_KEYBOARD)
         return ADMIN_QUESTIONS
+
+    elif text == 'Send Notification':
+        update.message.reply_text(text='Send me the text.', reply_markup=CANCEL_KEYBOARD)
+        return ADMIN_SEND_NOTIF
 
     elif text == 'Incoming Notifications':
         response,status = get_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_STATUS.value, token)
@@ -492,6 +496,33 @@ def admin_confirmation_state(update: telegram.Update, context: telegram.ext.Call
                 return ADMIN_EACH_RESOURCE
             update.message.reply_text(text='Resource deleted successfully!', reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
             return ADMIN_EACH_CATEGORY
+        # SEND NOTIF
+        elif confirmation_action == 'SEND_NOTIF':
+            text = context.chat_data['notif_text']
+            token = context.bot_data['token']
+            response,status = get_with_auth(ApiUrls.ALL_STUDENTS_SESSIONS.value, token)
+            if status != 200:
+                update.message.reply_text(text=response['detail'], reply_markup=ADMIN_EACH_RESOURCE_KEYBOARD)
+                return ADMIN_EACH_RESOURCE
+            sent = 0
+            failed = 0
+            failed_list = []
+            for chat_id in response:
+                try:
+                    context.bot.send_message(chat_id, text=f"New Notification:\n\n{text}")
+                    sent += 1
+                except:
+                    failed += 1
+                    failed_list.append(chat_id)
+            
+            if failed == 0:
+                update.message.reply_text(text='Notif was sent successfuly!', reply_markup=ADMIN_MAIN_KEYBOARD)
+            else:
+                text = f"Notif was sent to {sent}/{sent + failed} students successfully!\n\nFailed users:\n"
+                for i,chat_id in enumerate(failed_list):
+                    text += f"[user{i+1}](tg://user?id={chat_id}"
+                update.message.reply_text(text=text, reply_markup=ADMIN_MAIN_KEYBOARD, parse_mode='Markdown')
+            return ADMIN_LOGGED_IN
 
     elif text == DECLINE_KEYWORD:
         if confirmation_action == 'HW_DELETE':
@@ -761,6 +792,14 @@ def admin_resource_link(update: telegram.Update, context: telegram.ext.CallbackC
             return ADMIN_EACH_CATEGORY
         update.message.reply_text(text='Resource created successfully!', reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
         return ADMIN_EACH_CATEGORY
+
+
+def admin_send_notif(update: telegram.Update, context: telegram.ext.CallbackContext):
+    context.chat_data['notif_text'] = update.message.text
+    context.chat_data['confirmation_action'] = 'SEND_NOTIF'
+    update.message.reply_text(text='Are you sure?', reply_markup=CONFIRMATION_KEYBOARD)
+    return ADMIN_CONFIRMATION_STATE
+
 
 def admin_incoming_notifs(update: telegram.Update, context: telegram.ext.CallbackContext):
     text = update.message.text
@@ -1121,7 +1160,8 @@ conv_handler = ConversationHandler(
 
             # ADMIN NOTIFS
             ADMIN_INCOMIG_NOTIFS: [MessageHandler((Filters.text & ~ Filters.command), admin_incoming_notifs)],
-
+            ADMIN_SEND_NOTIF: [MessageHandler((Filters.text & ~ Filters.command), admin_send_notif)],
+            
             # ADMIN QUESTIONs
             ADMIN_QUESTIONS: [MessageHandler((Filters.text & ~ Filters.command), admin_questions)],
             ADMIN_EACH_QUESTION: [MessageHandler((Filters.text & ~ Filters.command), admin_each_question)],
