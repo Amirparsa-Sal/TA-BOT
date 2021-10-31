@@ -74,7 +74,8 @@ def homework_file_directory_path(instance, filename):
 
 class HomeWork(models.Model):
     title = models.CharField(max_length=64)
-    file = models.FileField(upload_to=homework_file_directory_path, blank=True, null=True)
+    # file = models.FileField(upload_to=homework_file_directory_path, blank=True, null=True)
+    file_id = models.CharField(max_length=128, blank=True)
     grade = models.OneToOneField(Grade, on_delete=models.SET_NULL, null=True)
     due_date_time = models.DateTimeField()
     published = models.BooleanField(default=False)

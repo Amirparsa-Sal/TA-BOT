@@ -48,12 +48,12 @@ class ResourcePartialUpdateSerializer(serializers.Serializer):
 class HomeWorkSerializer(serializers.ModelSerializer):
     class Meta:
         model = HomeWork
-        fields = ['id','title','file','published','due_date_time']
+        fields = ['id','title','file_id','published','due_date_time']
         read_only_fields = ['id']
 
 class HomeWorkPartialUpdateSerializer(serializers.Serializer):
     title = serializers.CharField(required=False)
-    file = serializers.FileField(required=False)
+    file_id = serializers.CharField(required=False)
     published = serializers.BooleanField(required=False)
     due_date_time = serializers.DateTimeField(required=False)
 

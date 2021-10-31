@@ -341,7 +341,7 @@ class AdminHomeWorkView(ViewSet):
         seri = self.serializer_class(data=request.data)
         if seri.is_valid():
             hw = HomeWork(title=seri.validated_data.get('title'), \
-                          file=seri.validated_data.get('file'), \
+                          file_id=seri.validated_data.get('file_id'), \
                           published=seri.validated_data.get('published'), \
                           due_date_time=seri.validated_data.get('due_date_time'))
             hw.save()
@@ -359,7 +359,7 @@ class AdminHomeWorkView(ViewSet):
             try:
                 hw = HomeWork.objects.get(pk=hw_id)
                 hw.title = seri.validated_data.get('title',hw.title)
-                hw.file = seri.validated_data.get('file', hw.file)
+                hw.file_id = seri.validated_data.get('file_id', hw.file_id)
                 hw.due_date_time = seri.validated_data.get('due_date_time', hw.due_date_time)
                 hw.published = seri.validated_data.get('published', hw.published)
                 hw.save()
