@@ -44,7 +44,7 @@ CONFIRMATION_KEYBOARD = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-SKIP_KEYWORD = 'ولش کن'
+SKIP_KEYWORD = '/skip'
 SKIP_CANCEL_KEYBOARD = create_vertical_keyboard_with_cancel_button([SKIP_KEYWORD])
 
 # ADMIN HOMEWORK KEYBOARDS
@@ -74,7 +74,7 @@ ADMIN_EACH_HW_KEYBOARD = ReplyKeyboardMarkup(
 # ADMIN TIMELINE & RESOURCES KEYBOARDS
 CATEGORY_CHANGE_STATUS_KEYWORD = 'تغییر وضعیت'
 CATEGORY_MANAGE_RESOURCES_KEYWORD = 'مدیریت منابع'
-CATEGORY_ADD_RESOURCE_KEYWORD = 'اضافه کردن من'
+CATEGORY_ADD_RESOURCE_KEYWORD = 'اضافه کردن منبع'
 ADMIN_EACH_CATEGORY_KEYBOARD = create_vertical_keyboard_with_cancel_button([CATEGORY_CHANGE_STATUS_KEYWORD, CATEGORY_MANAGE_RESOURCES_KEYWORD, \
                                                                             CATEGORY_ADD_RESOURCE_KEYWORD])
 
@@ -176,7 +176,7 @@ ANSWER_WERE_SENT_MESSAGE = 'پاسخ با موفقیت به اکانت های ز
 ### MEMBER QUESTIONS
 SEND_YOUR_QUESTION_MESSAGE = 'لطفا سوالت رو برام بفرست!'
 HAVE_NOT_ASKED_QUESTIONS_MESSAGE = 'تا حالا هیچ سوالی نپرسیدی!'
-CHOOSE_QUESTION_MESSAGE = 'لطفا یه سوال رو انتخاب کن.ی اونایی که جلوشون تیک خورده پاسخ داده شدن.'
+CHOOSE_QUESTION_MESSAGE = 'لطفا یه سوال رو انتخاب کن. اونایی که جلوشون تیک خورده پاسخ داده شدن.'
 QUESTION_DETAILS_MESSAGE = 'سوال:\n{question}\n\nپاسخ:\n{answer}'
 QUESTION_SENT_MESSAGE = 'سوالت رو برای تدریسیار ها ارسال کردم. هر وقت جوابت رو دادن برات فورواردش می کنم.'
 NEW_ANSWER_MESSAGE = 'یه جواب جدید برای سوالت اومده!\n\nسوال:\n{question}\n\nپاسخ:\n{answer}'
@@ -198,19 +198,18 @@ NEW_NOTIF_MESSAGE = 'یه نوتیفیکیشن جدید اومده:\n\n{text}'
 ### Categories
 CHOOSE_CATEGORY_MESSAGE = 'لطفا یکی از مباحث زیر رو انتخاب کن!'
 CATEGORY_CHANGE_STATUS_MESSAGE = 'وضعیت این مبحث به {status} تغییر کرد.'
-LIST_OF_CATEGORIES_MESSAGE = 'لیست مباحث:\n\n'
 
 ### Resources
-RESOURCE_DELETED_MESSAGE = 'منبع با موفقیت حذف شد.'
 CHOOSE_RESOURCE_MESSAGE = 'لطفا یکی از منابع زیر رو انتخاب کن.'
 ADMIN_RESOURCE_ENTER_TITLE_MESSAGE = 'یه عنوان برای منبع بفرست برام!'
 ADMIN_RESOURCE_ENTER_TITLE_OR_SKIP_MESSAGE = 'یه عنوان برای منبع بفرست برام یا از /skip استفاده کن تا عنوان قبلی حفظ بشه.'
 ADMIN_RESOURCE_ENTER_LINK_MESSAGE = 'حالا یه لینک برای منبع بفرست برام!'
 ADMIN_RESOURCE_ENTER_LINK_OR_SKIP_MESSAGE = 'حالا یه لینک برای منبع بفرست برام یا از /skip استفاده کن تا عنوان قبلی حفظ بشه.'
-ADMIN_EACH_RESOURCE_MESSAGE = 'میخوای با این مبحث چیکار کنی؟'
+ADMIN_EACH_RESOURCE_MESSAGE = 'میخوای با این منبع چیکار کنی؟'
+LIST_OF_RESOURCES_MESSAGE = 'لیست منابع:\n\n'
 
 RESOURCE_DETAILS_MESSAGE = 'عنوان:\n{title}\n\nلینک:\n{link}'
-RESOURCE_UPDATED_MESSAGE = 'منبع با موفقیت آپدیت شد/'
+RESOURCE_UPDATED_MESSAGE = 'منبع با موفقیت آپدیت شد'
 RESOURCE_CREATED_MESSAGE = 'منبع با موفقیت ایجاد شد.'
 RESOURCE_DELETED_MESSAGE = 'منبع با موفقیت حذف شد.'
 

@@ -5,6 +5,7 @@ from django.http import response
 import telegram
 from telegram import replymarkup
 from telegram import message
+from telegram import chat
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
 import logging
 import environ
@@ -156,7 +157,7 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
         return ADMIN_SEND_NOTIF
 
     elif text == INCOMING_NOTIF_KEYWORD:
-        response,status = get_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_STATUS.value, token)
+        response,status = get_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_STATUS.value, token, chat_id=update.effective_chat.id)
         if status != 200:
             update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_LOGGED_IN
@@ -287,7 +288,7 @@ def register_enter_otp(update: telegram.Update, context: telegram.ext.CallbackCo
         #Check the otp correctness given the email and otp
         response, status = post(ApiUrls.ACTIVATE_ACCOUNT.value, email=email, otp=update.message.text)
         if status == 200:
-            update.message.reply_text(text=REGISTER_COMPLETED_MESSAGE, reply_markup=CANCEL_KEYBOARD)
+            update.message.reply_text(text=REGISTER_COMPLETED_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
             return NOT_LOGGED_IN
         update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=CANCEL_KEYBOARD)
         return REGISTER_ENTER_OTP
@@ -314,9 +315,9 @@ def login_enter_password(update: telegram.Update, context: telegram.ext.Callback
         # Navigate to admin panel if the user is admin
         if response['is_admin']:
             chat_id = update.effective_chat.id
-            if context.bot_data.get('questions_data',False):
+            if context.bot_data.get('questions_data',None) is None:
                 context.bot_data['questions_data'] = dict()
-            if context.bot_data['questions_data'].get(chat_id,False):
+            if context.bot_data['questions_data'].get(chat_id,None) is None:
                 context.bot_data['questions_data'][chat_id] = dict()
             update.message.reply_text(text=LOGIN_AS_ADMIN_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_LOGGED_IN
@@ -342,7 +343,7 @@ def register_admin_enter_secret(update: telegram.Update, context: telegram.ext.C
     email = context.chat_data['email']
     response, status = post(ApiUrls.REGISTER_ADMIN.value, email=email, secret=update.message.text)
     if status == 200:
-        update.message.reply_text(text=ADMIN_ACCESS_ACTIVATED_MESSAGE, reply_markup=CANCEL_KEYBOARD)    
+        update.message.reply_text(text=ADMIN_ACCESS_ACTIVATED_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)    
         return NOT_LOGGED_IN
     # Try again if the secret key is not correct
     update.message.reply_text(text=WRONG_SECRET, reply_markup=CANCEL_KEYBOARD)
@@ -651,7 +652,7 @@ def admin_each_category(update: telegram.Update, context: telegram.ext.CallbackC
             update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
             return ADMIN_EACH_CATEGORY
         status = '✅' if response['is_taught'] else '❌'
-        update.message.reply_text(text=CATEGORY_CHANGE_STATUS_MESSAGE, reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
+        update.message.reply_text(text=CATEGORY_CHANGE_STATUS_MESSAGE.format(status=status), reply_markup=ADMIN_EACH_CATEGORY_KEYBOARD)
         return ADMIN_EACH_CATEGORY
     # Manage current resources of the category
     elif text == CATEGORY_MANAGE_RESOURCES_KEYWORD:
@@ -791,9 +792,10 @@ def admin_send_notif(update: telegram.Update, context: telegram.ext.CallbackCont
 def admin_incoming_notifs(update: telegram.Update, context: telegram.ext.CallbackContext):
     text = update.message.text
     token = context.chat_data['token']
+    chat_id = update.effective_chat.id
     # Enable notifs
     if text == ENABLE_KEYWORD:
-        response,status = post_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_ENABLE.value, token)
+        response,status = post_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_ENABLE.value, token, chat_id=chat_id)
         if status != 200:
             update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_LOGGED_IN
@@ -801,7 +803,7 @@ def admin_incoming_notifs(update: telegram.Update, context: telegram.ext.Callbac
         return ADMIN_LOGGED_IN
     # Disable notifs
     elif text == DISABLE_KEYWORD:
-        response,status = post_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_DISABLE.value, token)
+        response,status = post_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_DISABLE.value, token, chat_id=chat_id)
         if status != 200:
             update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_LOGGED_IN
@@ -831,11 +833,11 @@ def member_get_categories(update: telegram.Update, context: telegram.ext.Callbac
                 update.message.reply_text(text=NO_DATA_MESSAGE, reply_markup=MEMBER_MAIN_KEYBOARD)
                 return MEMBER_LOGGED_IN
 
-            message = LIST_OF_CATEGORIES_MESSAGE
-            for res in enumerate(response):
-                message += f'({res.title})[{res.link}]\n'
+            message = LIST_OF_RESOURCES_MESSAGE
+            for i,res in enumerate(response):
+                message += f"[{res['title']}]({res['link']})\n"
 
-            update.message.reply_text(text=message, reply_markup=MEMBER_MAIN_KEYBOARD, parse_mode='Markdown')
+            update.message.reply_text(text=message, reply_markup=MEMBER_MAIN_KEYBOARD, parse_mode='Markdown', disable_web_page_preview=True)
             return MEMBER_LOGGED_IN
 
     elif action == 'ask':
@@ -934,7 +936,7 @@ def member_questions_main(update: telegram.Update, context: telegram.ext.Callbac
 
         # Creating buttons using retrieved categories and store cateegory id in local storage to use later.
         if len(response) == 0:
-            update.message.reply_text(text=HAVE_NOT_ASKED_QUESTIONS_MESSAGE, reply_markup=MEMBER_MAIN_KEYBOARD)
+            update.message.reply_text(text=HAVE_NOT_ASKED_QUESTIONS_MESSAGE, reply_markup=MEMBER_QUESTIONS_KEYBOARD)
             return MEMBER_QUESTIONS_MAIN
         
         keyboard_buttons = []
@@ -1068,7 +1070,7 @@ def admin_each_question(update: telegram.Update, context: telegram.ext.CallbackC
 
 @get_last_login
 def answer(update: telegram.Update, context: telegram.ext.CallbackContext):
-    if not context.chat_data['is_admin']:
+    if context.chat_data.get('is_admin',None) is None:
         update.message.reply_text(text=DIDNT_UNDERSTAND_MESSAGE, reply_markup=MEMBER_MAIN_KEYBOARD)
         return MEMBER_LOGGED_IN
         
@@ -1105,7 +1107,7 @@ def answer(update: telegram.Update, context: telegram.ext.CallbackContext):
     return ADMIN_LOGGED_IN
     
 conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel)],
+        entry_points=[CommandHandler('start', start), MessageHandler((Filters.text & ~ Filters.command), entry_message_handler), MessageHandler(Filters.command & Filters.regex('/cancel'), cancel),  MessageHandler(Filters.command & Filters.regex('/register_admin'), register_admin)],
         states={
             # NOT_LOGGED_IN STATE
             NOT_LOGGED_IN: [MessageHandler((Filters.text & ~ Filters.command), not_logged_in)],
@@ -1114,7 +1116,7 @@ conv_handler = ConversationHandler(
             MEMBER_LOGGED_IN: [MessageHandler((Filters.text & ~ Filters.command), member_logged_in)],
             ADMIN_LOGGED_IN: [MessageHandler((Filters.text & ~ Filters.command), admin_logged_in)],
 
-            # REGISTER STATES
+            # # REGISTER STATES
             REGISTER_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), register_enter_email)],
             REGISTER_ENTER_OTP: [MessageHandler((Filters.text & ~ Filters.command), register_enter_otp)],
             
