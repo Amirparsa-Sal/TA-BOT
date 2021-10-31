@@ -467,34 +467,44 @@ class AdminNotificationsView(ViewSet):
     
     authentication_classes = [TokenAuthentication]
     permissions_classes = [IsAdminUser]
+    serializer_class = ChatIdSerializer
 
     def get_incoming_notif_status(self, request):
-        user = request.user
-        try:
-            active_session = TelegramActiveSessions.objects.get(user=user)
-            return Response(data={'status': active_session.allow_notif}, status=status.HTTP_200_OK)
-        except:
-            raise NotFound('User telegram session not found!')
+        chat_id = int(request.GET.get('chat_id', None))
+        if chat_id is not None:
+            user = request.user
+            try:
+                active_session = TelegramActiveSessions.objects.get(user=user, chat_id=chat_id)
+                return Response(data={'status': active_session.allow_notif}, status=status.HTTP_200_OK)
+            except:
+                raise NotFound('User telegram session not found!')
+        raise ValidationError('Chat id must be passed!')
 
     def enable_notif(self, request):
-        user = request.user
-        try:
-            active_session = TelegramActiveSessions.objects.get(user=user)
-            active_session.allow_notif = True
-            active_session.save()
-            return Response(data=None, status=status.HTTP_200_OK)
-        except:
-            raise NotFound('User telegram session not found!')
+        seri = self.serializer_class(data=request.data)
+        if seri.is_valid():
+            chat_id = int(seri.validated_data['chat_id'])
+            try:
+                active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+                active_session.allow_notif = True
+                active_session.save()
+                return Response(data=None, status=status.HTTP_200_OK)
+            except:
+                raise NotFound('User telegram session not found!')
+        raise ValidationError('Chat id must be passed in body!')
 
     def disable_notif(self, request):
-        user = request.user
-        try:
-            active_session = TelegramActiveSessions.objects.get(user=user)
-            active_session.allow_notif = False
-            active_session.save()
-            return Response(data=None, status=status.HTTP_200_OK)
-        except:
-            raise NotFound('User telegram session not found!')
+        seri = self.serializer_class(data=request.data)
+        if seri.is_valid():
+            chat_id = int(seri.validated_data['chat_id'])
+            try:
+                active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+                active_session.allow_notif = False
+                active_session.save()
+                return Response(data=None, status=status.HTTP_200_OK)
+            except:
+                raise NotFound('User telegram session not found!')
+        raise ValidationError('Chat id must be passed in body!')
 
     def find_admins_to_send_notif(self, request):
         admins = TelegramActiveSessions.objects.filter(allow_notif=True, user__is_staff=True)
@@ -586,11 +596,10 @@ class AdminQuestionAnswerView(ViewSet):
 
         message_id_list = redis_instance.get(chat_id)
         if message_id_list is None:
-            return Response(data=[], status=status.HTTP_200_OK)
+            return Response(data=dict(), status=status.HTTP_200_OK)
         
         output = dict()
         message_id_list = message_id_list.decode('utf-8').split('|')
-        print(message_id_list)
         for i in range(len(message_id_list) - 1):
             message_id = message_id_list[i]
             question_id = redis_instance.get(f"{chat_id}|{message_id}")
