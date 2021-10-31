@@ -546,27 +546,28 @@ class AdminQuestionAnswerView(ViewSet):
         seri = self.question_update_message_serializer(data=request.data, many=True)
         if seri.is_valid():
             try:
-                QuestionAnswer.objects.get(pk=q_id)
+                question = QuestionAnswer.objects.get(pk=q_id)
 
                 for data in seri.validated_data:
-                    chat_id = data['chat_id']
-                    message_id = data['message_id']
+                    chat_id = str(data['chat_id'])
+                    message_id = str(data['message_id'])
 
                     # Check if the chat_id is added before
-                    all_questions = redis_instance.get(f"{chat_id}")
-                    if all_questions is None:
-                        redis_instance.set(f"{chat_id}", '')
-                        all_questions = b''
-                    all_questions = all_questions.decode('utf-8')
+                    all_questions = redis_instance.get(chat_id)
+                    all_questions = '' if all_questions is None else all_questions.decode('utf-8')    
+                        
                     key = f"{chat_id};{q_id}"
                     # If the question is added before
-                    if f"{message_id}" in all_questions:
-                        message_id_list = redis_instance.get(key).decode('utf-8')
-                        if f"{message_id}" not in message_id_list:
+                    if str(question.id) in all_questions:
+                        message_id_list = redis_instance.get(key)
+                        message_id_list = '' if  message_id_list is None else message_id_list.decode('utf-8')
+                        
+                        if message_id not in message_id_list:
                             redis_instance.set(key, f"{message_id_list}{message_id}|")
+                            redis_instance.set(chat_id, f"{all_questions}{message_id}|")
                     else:
-                        redis_instance.set(f"{chat_id}", all_questions + f"{message_id}|")
-                        redis_instance.set(key, f"{message_id}|")
+                        redis_instance.set(chat_id, f"{all_questions}{message_id}|")
+                        redis_instance.set(key, message_id)
 
                     redis_instance.set(f"{chat_id}|{message_id}", f'{q_id}')
 
