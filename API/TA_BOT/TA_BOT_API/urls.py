@@ -37,6 +37,9 @@ all_student_sessions = BotMetaDataView.as_view({
     'get': 'get_all_students_sessions'
 })
 
+get_all_admin_sessions = BotMetaDataView.as_view({
+    'get': 'get_all_admin_sessions'
+})
 # Member Category urls
 
 member_category_root = MemberCategoryView.as_view({
@@ -108,10 +111,6 @@ admin_get_notif_status = AdminNotificationsView.as_view({
     'get': 'get_incoming_notif_status'
 })
 
-admin_notif_get_all = AdminNotificationsView.as_view({
-    'get': 'find_admins_to_send_notif'
-})
-
 member_homework_root = MemberHomeworkView.as_view({
     'get': 'get_published_homeworks'
 })
@@ -162,6 +161,7 @@ urlpatterns = [
     path('auth/last-login/', last_login),
     path('auth/active-sessions/', active_sessions),
     path('auth/all-students-sessions/', all_student_sessions),
+    path('auth/all-admins-sessions/', get_all_admin_sessions),
 
     path('member/categories/', member_category_root),
     path('admin/categories/', admin_category_root),
@@ -179,7 +179,6 @@ urlpatterns = [
     path('admin/incoming-notifs/status/', admin_get_notif_status),
     path('admin/incoming-notifs/enable/', admin_notification_enable),
     path('admin/incoming-notifs/disable/', admin_notification_disable),
-    path('admin/incoming-notifs/admins/', admin_notif_get_all),
 
     path('member/categories/', member_category_root),
     path('member/categories/<int:cat_id>/resources/', member_category_resources),
