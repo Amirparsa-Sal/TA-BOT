@@ -21,6 +21,7 @@ class ApiUrls(Enum):
     LAST_LOGIN = AUTH_BASE + 'last-login/'
     ACTIVE_SESSIONS = AUTH_BASE + 'active-sessions/'
     ALL_STUDENTS_SESSIONS = AUTH_BASE + 'all-students-sessions/'
+    ALL_ADMINS_SESSIONS = AUTH_BASE + 'all-admins-sessions/'
 
     ###### Member Urls
 
@@ -56,7 +57,6 @@ class ApiUrls(Enum):
     ADMIN_INCOMING_NOTIF_STATUS  = ADMIN_BASE_URL + 'incoming-notifs/status/'
     ADMIN_INCOMING_NOTIF_ENABLE  = ADMIN_BASE_URL + 'incoming-notifs/enable/'
     ADMIN_INCOMING_NOTIF_DISABLE  = ADMIN_BASE_URL + 'incoming-notifs/disable/'
-    ADMIN_INCOMING_NOTIF_ADMINS = ADMIN_BASE_URL + 'incoming-notifs/admins/'
 
     # ADMIN QUESTION ANSWER
     ADMIN_QUESTION_ANSWER_ANSWER = ADMIN_BASE_URL + 'question-answer/{id}/answer/'

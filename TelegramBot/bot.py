@@ -173,9 +173,10 @@ def admin_logged_in(update: telegram.Update, context: telegram.ext.CallbackConte
             return ADMIN_LOGGED_IN
 
         del context.chat_data['token']
+        del context.chat_data['is_admin']
         del context.bot_data['questions_data'][chat_id]
 
-        update.message.reply_text(text=LOGOUT_KEYWORD, reply_markup=NOT_LOGGED_IN_KEYBOARD)
+        update.message.reply_text(text=LOGOUT_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
         return NOT_LOGGED_IN
     # Stay at this state if the user enters shit
     update.message.reply_text(text=DIDNT_UNDERSTAND_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
@@ -255,6 +256,7 @@ def member_logged_in(update: telegram.Update, context: telegram.ext.CallbackCont
             return ADMIN_LOGGED_IN
         
         del context.chat_data['token']
+        del context.chat_data['is_admin']
         update.message.reply_text(text=LOGOUT_KEYWORD, reply_markup=NOT_LOGGED_IN_KEYBOARD)
         return NOT_LOGGED_IN
     # Stay at this state if the user enters shit
@@ -314,11 +316,19 @@ def login_enter_password(update: telegram.Update, context: telegram.ext.Callback
         context.chat_data['is_admin'] = response['is_admin']
         # Navigate to admin panel if the user is admin
         if response['is_admin']:
-            chat_id = update.effective_chat.id
-            if context.bot_data.get('questions_data',None) is None:
+            chat_id = update.effective_chat.id 
+            response, status = get_with_auth(ApiUrls.ADMIN_QUESTION_ANSWER_GET_DATA.value, response['token'], chat_id=update.effective_chat.id)
+            if status != 200:
+                update.message.reply_text(text='Oops sth went wrong!')
+                return 
+
+            if context.bot_data.get('questions_data', None) is None: 
                 context.bot_data['questions_data'] = dict()
-            if context.bot_data['questions_data'].get(chat_id,None) is None:
-                context.bot_data['questions_data'][chat_id] = dict()
+            chat_id = update.effective_chat.id
+            context.bot_data['questions_data'][chat_id] = dict()
+            for key,value in response.items():
+                context.bot_data['questions_data'][chat_id][key] = value
+
             update.message.reply_text(text=LOGIN_AS_ADMIN_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
             return ADMIN_LOGGED_IN
         # Navigate to member panel if the user is not admin
@@ -996,7 +1006,7 @@ def member_ask_question(update: telegram.Update, context: telegram.ext.CallbackC
     question_id = response['id']
     # Get All admins who allowed_notif
     
-    response, status = get_with_auth(ApiUrls.ADMIN_INCOMING_NOTIF_ADMINS.value, bot_token)
+    response, status = get_with_auth(ApiUrls.ALL_ADMINS_SESSIONS.value, bot_token)
     if status != 200:
         # TODO: add log here
         update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=MEMBER_MAIN_KEYBOARD)
@@ -1070,10 +1080,10 @@ def admin_each_question(update: telegram.Update, context: telegram.ext.CallbackC
     context.bot_data['questions_data'][chat_id][str(message.message_id)] = response['id']
     response, status = put_with_auth_and_body(ApiUrls.ADMIN_QUESTION_ANSWER_WITH_ID.value.format(id=selected_question_id), token, [{'chat_id': chat_id, 'message_id': message.message_id}])
     if status != 200:
-        update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=ADMIN_QUESTIONS_KEYBOARD)
-        return ADMIN_QUESTIONS
+        update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=ADMIN_MAIN_KEYBOARD)
+        return ADMIN_LOGGED_IN
 
-    return ADMIN_QUESTIONS
+    return ADMIN_LOGGED_IN
 
 @get_last_login
 def answer(update: telegram.Update, context: telegram.ext.CallbackContext):
