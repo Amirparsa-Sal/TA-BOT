@@ -1,9 +1,6 @@
 from typing import Iterable
 from telegram import ReplyKeyboardMarkup,KeyboardButton
 
-ENABLE_KEYWORD = 'فعالش کن'
-DISABLE_KEYWORD = 'غیر فعالش کن'
-
 def create_vertical_keyboard(buttons: Iterable):
     keyboard = [[KeyboardButton(button)] for button in buttons]
     return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
@@ -15,7 +12,7 @@ def create_vertical_keyboard_with_cancel_button(buttons: Iterable):
     return ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 CANCEL_KEYBOARD = create_vertical_keyboard_with_cancel_button([])
 
-# MAIN KEYBOARDS 
+### MAIN KEYBOARDS 
 REGISTER_KEYWORD = 'ثبت نام'
 LOGIN_KEYWORD = 'ورود'
 NOT_LOGGED_IN_KEYBOARD = create_vertical_keyboard([REGISTER_KEYWORD, LOGIN_KEYWORD])
@@ -35,6 +32,7 @@ TIMELINE_KEYWORD = 'مباحث درس'
 MEMBER_MAIN_KEYBOARD = create_vertical_keyboard([QUESTIONS_KEYWORD, HOMEWORKS_KEYWORD, GRADES_KEYWORD, RESOURCES_KEYWORD, \
                                                  TIMELINE_KEYWORD, LOGOUT_KEYWORD])
 
+### CONFIRMATION KEYBOARD
 CONFIRM_KEYWORD = 'آره'
 DECLINE_KEYWORD = 'نه'
 CONFIRMATION_KEYBOARD = ReplyKeyboardMarkup(
@@ -44,11 +42,11 @@ CONFIRMATION_KEYBOARD = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
+### SKIP CANCEL KEYBOARD
 SKIP_KEYWORD = '/skip'
 SKIP_CANCEL_KEYBOARD = create_vertical_keyboard_with_cancel_button([SKIP_KEYWORD])
 
-# ADMIN HOMEWORK KEYBOARDS
-
+### ADMIN HOMEWORK KEYBOARDS
 MANAGE_HOMEWORKS_KEYWORD = 'مدیریت تمارین'
 CREATE_HOMEWORK_KEYWORD = 'ایجاد تمرین جدید'
 ADMIN_HOMEWORKS_MAIN_KEYBOARD = create_vertical_keyboard_with_cancel_button([MANAGE_HOMEWORKS_KEYWORD, CREATE_HOMEWORK_KEYWORD])
@@ -71,7 +69,7 @@ ADMIN_EACH_HW_KEYBOARD = ReplyKeyboardMarkup(
     ]
 )
 
-# ADMIN TIMELINE & RESOURCES KEYBOARDS
+### ADMIN TIMELINE & RESOURCES KEYBOARDS
 CATEGORY_CHANGE_STATUS_KEYWORD = 'تغییر وضعیت'
 CATEGORY_MANAGE_RESOURCES_KEYWORD = 'مدیریت منابع'
 CATEGORY_ADD_RESOURCE_KEYWORD = 'اضافه کردن منبع'
@@ -84,7 +82,10 @@ RESOURCE_DELETE_KEYWORD = 'حذف منبع'
 ADMIN_EACH_RESOURCE_KEYBOARD = create_vertical_keyboard_with_cancel_button([RESOURCE_DETAILS_KEYWORD, RESOURCE_UPDATE_KEYWORD, \
                                                                             RESOURCE_DELETE_KEYWORD])
 
-# ADMIN INCOMING NOTIFS KEYBOARD
+
+### ADMIN INCOMING NOTIFS KEYBOARD
+ENABLE_KEYWORD = 'فعالش کن'
+DISABLE_KEYWORD = 'غیر فعالش کن'
 ADMIN_INCOMING_NOTIFS_KEYBOARD = ReplyKeyboardMarkup(
     [
         [ENABLE_KEYWORD, DISABLE_KEYWORD]
@@ -92,46 +93,36 @@ ADMIN_INCOMING_NOTIFS_KEYBOARD = ReplyKeyboardMarkup(
     one_time_keyboard=True
 )
 
-# ADMIN QUESTIONS
+### ADMIN QUESTIONS
 ALL_UNANSWERED_QUESTIONS_KEYWORD = 'سوالات بدون پاسخ'
 ALL_ANSWERED_QUESTIONS_KEYWORD = 'سوالات پاسخ داده شده'
 ADMIN_QUESTIONS_KEYBOARD = create_vertical_keyboard_with_cancel_button([ALL_UNANSWERED_QUESTIONS_KEYWORD, ALL_ANSWERED_QUESTIONS_KEYWORD])
 
-# MEMBER QUESTIONS
+### MEMBER QUESTIONS
 ASK_QUESTION_KEYWORD = 'پرسیدن سوال جدید'
 MY_QUESTIONS_KEYWORD = 'سوالات من'
 MEMBER_QUESTIONS_KEYBOARD = create_vertical_keyboard_with_cancel_button([ASK_QUESTION_KEYWORD, MY_QUESTIONS_KEYWORD])
 
 ############ MESSAGES #############
 
+### GENERAL
 HI_MESSAGE = 'سلام. به ربات تدریسیاری درس مبانی برنامه نویسی خوش اومدی! برای شروع به کار یکی از گزینه های زیر رو انتخاب کن.'
-
 OPERATION_CANCELED_MESSAGE = 'عملیات لغو شد!'
-
 CHOOSE_FROM_KEYBOARD_MESSAGE = 'لطفا یکی از گزینه های زیر رو انتخاب کن!'
-
-DIDNT_UNDERSTAND_MESSAGE = 'ببخشید؟ متوجه نشدم!'
-
 STH_WENT_WRONG_MESSAGE = 'ای بابا! یه مشکلی پیش اومد. نتونستم انجامش بدم.'
-
 NO_DATA_MESSAGE = 'در حال حاضر اطلاعاتی تو این بخش وجود نداره!'
-
 LOGOUT_MESSAGE = 'شما با موفقیت از حساب خارج شدین.'
-
 WAIT_MESSAGE = 'اندکی صبر...'
-
-OTP_SENT_MESSAGE = 'رمز یک بار مصرف به ایمیل ارسال شد. لطفا اونو برام بفرست!'
-
 ARE_YOU_SURE_MESSAGE = 'مطمئنی؟'
 
-### Validation
-
+### VALIDATION
 NOT_AN_AUT_EMAIL_MESSAGE = 'این ایمیل مال aut نیست عزیز! لطفا ایمیل دانشگاهیت رو بفرست!'
 NOT_AN_EMAIL_MESSAGE = 'این چیزی که وارد کردی اصن ایمیل نیست! لطفا یه ایمیل معتبر وارد کن.'
 NOT_CORRECT_OTP_FORMAT_MESSAGE = 'رمز یک بار مصرف یه عدد ۵ رقمیه! یه دور دیگه واردش کن.'
 NOT_AN_URL_MESSAGE = 'چیزی که وارد کردی لینک نیست! لطفا یه لینک معتبر بفرست.'
+DIDNT_UNDERSTAND_MESSAGE = 'ببخشید؟ متوجه نشدم!'
 
-### Auth
+### AUTH
 REGISTER_COMPLETED_MESSAGE = 'ثبت نام با موفقیت انجام شد!'
 SEND_EMAIL_MESSAGE = 'لطفا ایمیلت رو برام بفرست!'
 SEND_PASSWORD_MESSAGE = 'حالا لطفا رمزت رو برام بفرست. این رمز به صورت پیش فرض برابر با شماره دانشجویی شماست.'
@@ -141,6 +132,7 @@ LOGIN_AS_STUDENT_MESSAGE = 'با موفقیت وارد شدی :)'
 WRONG_CREDENTIALS_MESSAGE = 'ایمیل یا رمز عبور رو اشتباه وارد کردی! حالا دوباره از اول ایمیل رو برام بفرست.'
 WRONG_SECRET = 'رمز مخفی رو اشتباه وارد کردی! دوباره بفرستش اگه راست میگی!'
 ADMIN_ACCESS_ACTIVATED_MESSAGE = 'دسترسی ادمین برای این ایمیل فعال شد!'
+OTP_SENT_MESSAGE = 'رمز یک بار مصرف به ایمیل ارسال شد. لطفا اونو برام بفرست!'
 
 #### ADMIN HOMEWORKS
 ADMIN_HOMEWORKS_MAIN_MESSAGE = 'شما در بخش تمارین هستید!'
@@ -161,7 +153,6 @@ HOMEWORK_DELETED_MESSAGE = 'تمرین با موفقیت حذف شد.'
 HOMEWORK_UPDATED_MESSAGE = 'تمرین با موفقیت آپدیت شد.'
 HOMEWORK_CREATED_MESSAGE = 'تمرین با موفقیت ایجاد شد.'
 GRADES_UPDATED_MESSAGE = 'نمرات با موفقیت آپدیت شدن.'
-
 ENTER_GRADES_LINK_MESSAGE = 'لطفا لینک نمرات تمرین رو برام بفرست.'
 
 #### ADMIN QUESTIONS
@@ -195,11 +186,11 @@ ADMIN_EACH_CATEGORY_MESSAGE = 'میخوای با این مبحث چیکار کن
 ### MEMBER NOTIF
 NEW_NOTIF_MESSAGE = 'یه نوتیفیکیشن جدید اومده:\n\n{text}'
 
-### Categories
+### CATEGORIES
 CHOOSE_CATEGORY_MESSAGE = 'لطفا یکی از مباحث زیر رو انتخاب کن!'
 CATEGORY_CHANGE_STATUS_MESSAGE = 'وضعیت این مبحث به {status} تغییر کرد.'
 
-### Resources
+### RESOURCES
 CHOOSE_RESOURCE_MESSAGE = 'لطفا یکی از منابع زیر رو انتخاب کن.'
 ADMIN_RESOURCE_ENTER_TITLE_MESSAGE = 'یه عنوان برای منبع بفرست برام!'
 ADMIN_RESOURCE_ENTER_TITLE_OR_SKIP_MESSAGE = 'یه عنوان برای منبع بفرست برام یا از /skip استفاده کن تا عنوان قبلی حفظ بشه.'
