@@ -278,6 +278,9 @@ def register_enter_email(update: telegram.Update, context: telegram.ext.Callback
         if status == 200:
             update.message.reply_text(text=OTP_SENT_MESSAGE, reply_markup=CANCEL_KEYBOARD)
             return REGISTER_ENTER_OTP
+        elif status == 400:
+            update.message.reply_text(text=response['detail'], reply_markup=CANCEL_KEYBOARD)
+            return REGISTER_ENTER_EMAIL
         update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=CANCEL_KEYBOARD)
         return REGISTER_ENTER_EMAIL
     update.message.reply_text(text=NOT_AN_AUT_EMAIL_MESSAGE, reply_markup=CANCEL_KEYBOARD)
@@ -292,6 +295,9 @@ def register_enter_otp(update: telegram.Update, context: telegram.ext.CallbackCo
         if status == 200:
             update.message.reply_text(text=REGISTER_COMPLETED_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
             return NOT_LOGGED_IN
+        elif status == 400:
+            update.message.reply_text(text=response['detail'], reply_markup=CANCEL_KEYBOARD)
+            return REGISTER_ENTER_OTP
         update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=CANCEL_KEYBOARD)
         return REGISTER_ENTER_OTP
     update.message.reply_text(text=NOT_CORRECT_OTP_FORMAT_MESSAGE, reply_markup=CANCEL_KEYBOARD)
@@ -319,7 +325,7 @@ def login_enter_password(update: telegram.Update, context: telegram.ext.Callback
             chat_id = update.effective_chat.id 
             response, status = get_with_auth(ApiUrls.ADMIN_QUESTION_ANSWER_GET_DATA.value, response['token'], chat_id=update.effective_chat.id)
             if status != 200:
-                update.message.reply_text(text='Oops sth went wrong!')
+                update.message.reply_text(text=STH_WENT_WRONG_MESSAGE)
                 return 
 
             if context.bot_data.get('questions_data', None) is None: 
@@ -352,6 +358,10 @@ def register_admin_enter_secret(update: telegram.Update, context: telegram.ext.C
     # Send the register request
     email = context.chat_data['email']
     response, status = post(ApiUrls.REGISTER_ADMIN.value, email=email, secret=update.message.text)
+    if status == 400:
+        update.message.reply_text(text=response['detail'])
+        return REGISTER_ADMIN_ENTER_SECRET
+        
     if status == 200:
         update.message.reply_text(text=ADMIN_ACCESS_ACTIVATED_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)    
         return NOT_LOGGED_IN

@@ -19,7 +19,7 @@ from .serializers import AnswerSerializer, ChatIdMessageIdSerializer, GradeSeria
     ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer \
 
 from .models import AuthData, Category, Grade, QuestionAnswer, TelegramActiveSessions, Resource, HomeWork
-from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException
+from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException, AuthDataNotFoundException
 
 from smtplib import SMTPException
 from rest_framework.authtoken.views import ObtainAuthToken
@@ -136,14 +136,14 @@ class AuthView(ViewSet):
                     user = user_model.objects.get(email__iexact=email)
                     # Checking if the user has activated his/her account already
                     if user.is_active:
-                        raise UserAlreadyExistsException('A user with this email already exists!')
+                        raise UserAlreadyExistsException(detail='یه کاربر قبلا با این ایمیل ثبت نام کرده! یه ایمیل دیگه وارد کن!')
                 except user_model.DoesNotExist:
                     # Create a new user if user does not exist
                     try:
                         auth_data = AuthData.objects.get(email__iexact=email)
                         user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.student_id, student_id=auth_data.student_id)
                     except AuthData.DoesNotExist:
-                        raise NotFound(detail='Student not found in database.')
+                        raise AuthDataNotFoundException(detail='اطلاعات مربوط به این ایمیل در بات ثبت نشده! لطفا دوباره ایمیل رو وارد کن!')
             
             # Create OTP and save in redis
             otp = get_random_string(length=5, allowed_chars='0123456789')
@@ -175,10 +175,10 @@ class AuthView(ViewSet):
             # Checking if the user has requested an otp
             otp = redis_instance.get(email)
             if otp is None:
-                raise NoOtpException(detail='You have not requested an otp yet.')
+                raise NoOtpException(detail='شما تا حالا درخواست فرستادن رمز یک بار مصرف ندادید!')
             # Checking if the otp is correct
             if given_otp != otp.decode('utf-8'):
-                raise OtpMismatchException('Otp is not correct!')
+                raise OtpMismatchException(detail='رمز یک بار مصرف وارد شده اشتباهه! لطفا دوباره واردش کن!')
 
             # Activate account
             user = user_model.objects.get(email__iexact=email)
@@ -206,12 +206,12 @@ class AuthView(ViewSet):
 
             # Checking if the secret key is correct
             if given_secret != secret:
-                raise InvalidSecretKey(detail='The entered secret key is incorrect.')
+                raise InvalidSecretKey(detail='رمز وارد شده اشتباهه! دوباره واردش کن!')
             
             # Checking if a user with that email already exists
             try:
                 user_model.objects.get(email__iexact=email)
-                raise UserAlreadyExistsException(detail='A user with this email already exists!')
+                raise UserAlreadyExistsException(detail='یه کاربر با این ایمیل تو بات وجود داره! یه ایمیل دیگه وارد کن!')
             except user_model.DoesNotExist:
                 user_model.objects.create_superuser(email, secret)
 

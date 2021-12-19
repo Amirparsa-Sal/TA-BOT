@@ -5,6 +5,10 @@ class UserAlreadyExistsException(APIException):
     default_detail = 'A user with this email already exists!'
     default_code = 'bad_request'
 
+class AuthDataNotFoundException(APIException):
+    status_code = 400
+    default_detail = 'A user with this email already exists!'
+    default_code = 'bad_request'
 
 class NoOtpException(APIException):
     status_code = 400
