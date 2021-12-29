@@ -2,7 +2,9 @@ django==3.2.7
 djangorestframework==3.12.4 
 django-environ==0.7.0
 redis==3.5.3
+django-import-export==2.7.1
 
 python-telegram-bot==13.7
 requests==2.26.0
 jdatetime==3.6.4
+
