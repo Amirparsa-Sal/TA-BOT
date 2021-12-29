@@ -16,6 +16,8 @@ class AuthenticationBackend(ModelBackend):
         try:
             user = user_model.objects.get(email__iexact=username)
             if user.check_password(password):
+                if user.is_superuser:
+                    return user
                 chat_id = int(request.data.get('chat_id'))
                 if chat_id is None:
                     raise ValidationError('Chat_id is not sent in response body!')
@@ -27,7 +29,6 @@ class AuthenticationBackend(ModelBackend):
                     user.save()
                 return user
         except user_model.DoesNotExist:
-            print('here')
             return None
 
     def get_user(self, user_id):
