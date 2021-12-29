@@ -1,11 +1,6 @@
 from calendar import calendar
-from os import chflags, stat, stat_result
-from django.core.checks import messages
-from django.http import response
+from os import chflags, stat
 import telegram
-from telegram import replymarkup
-from telegram import message
-from telegram import chat
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
 import logging
 import environ
@@ -50,7 +45,7 @@ MEMBER_QUESTIONS_MAIN, MEMBER_MY_QUESTIONS = range(33)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
-AUT_EMAIL_REGEX = '^[A-Za-z0-9._%+-]+@aut\.ac\.ir'
+UNI_EMAIL_REGEX = env('UNI_EMAIL_REGEX', default='^[A-Za-z0-9._%+-]+@aut\.ac\.ir')
 OTP_REGEX = '^[0-9]{5}'
 URL_REGEX = "(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
 
@@ -270,7 +265,7 @@ def register_admin(update: telegram.Update, context: telegram.ext.CallbackContex
 
 def register_enter_email(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Check if the email is AUT email
-    if re.fullmatch(AUT_EMAIL_REGEX, update.message.text):
+    if re.fullmatch(UNI_EMAIL_REGEX, update.message.text):
         context.chat_data['email'] = update.message.text #Saving the email to use it in next request
         #Send the otp
         update.message.reply_text(text=WAIT_MESSAGE)
