@@ -2,18 +2,12 @@ from django.core.checks import messages
 from django.core.validators import MinLengthValidator, validate_integer
 from django.db.models import fields
 from rest_framework import serializers
-from django.core.validators import MinLengthValidator,MaxLengthValidator,DecimalValidator
+from django.core.validators import MinLengthValidator,MaxLengthValidator
 from .models import Category, HomeWork, QuestionAnswer, Resource, Grade
 
 class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
     email = serializers.EmailField()
-
-    def validate(self, attrs):
-        '''Check if the student_id is valid.'''
-        if attrs['email'][-10:] == '@aut.ac.ir':
-            return super().validate(attrs)
-        raise serializers.ValidationError(detail='Student email is not valid!')
 
 class AccountActivitionSerializer(serializers.Serializer):
     '''A serializer to get inputs of acccount activision api. It recieves chat_id and otp as inputs.'''

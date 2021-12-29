@@ -275,3 +275,4 @@ pip-selfcheck.json
 
 # ignore uploads folder
 /API/TA_BOT/uploads/
+/API/TA_BOT/static/

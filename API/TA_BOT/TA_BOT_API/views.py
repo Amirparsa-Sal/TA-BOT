@@ -141,7 +141,7 @@ class AuthView(ViewSet):
                     # Create a new user if user does not exist
                     try:
                         auth_data = AuthData.objects.get(email__iexact=email)
-                        user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.student_id, student_id=auth_data.student_id)
+                        user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.student_id, student_id=auth_data.password)
                     except AuthData.DoesNotExist:
                         raise AuthDataNotFoundException(detail='اطلاعات مربوط به این ایمیل در بات ثبت نشده! لطفا دوباره ایمیل رو وارد کن!')
             

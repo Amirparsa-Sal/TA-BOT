@@ -7,7 +7,8 @@ from django.db.models.base import Model
 
 class AuthData(models.Model):
 
-    student_id = models.CharField(validators=[MinLengthValidator(8)], max_length=8, unique=True, null=False)
+    password = models.CharField(max_length=128, unique=True, null=False)
+    student_id = models.CharField(max_length=16, null=False)
     email = models.EmailField(unique=True, null=False)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -38,7 +39,6 @@ class UserManager(BaseUserManager):
         return user
 
 class User(AbstractBaseUser, PermissionsMixin):
-    student_id = models.CharField(validators=[MinLengthValidator(8)], max_length=8, null=True)
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=255, null=True)
     last_name = models.CharField(max_length=255, null=True)
