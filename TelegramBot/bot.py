@@ -252,7 +252,7 @@ def member_logged_in(update: telegram.Update, context: telegram.ext.CallbackCont
         
         del context.chat_data['token']
         del context.chat_data['is_admin']
-        update.message.reply_text(text=LOGOUT_KEYWORD, reply_markup=NOT_LOGGED_IN_KEYBOARD)
+        update.message.reply_text(text=LOGOUT_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
         return NOT_LOGGED_IN
     # Stay at this state if the user enters shit
     update.message.reply_text(text=DIDNT_UNDERSTAND_MESSAGE, reply_markup=MEMBER_MAIN_KEYBOARD)
@@ -571,16 +571,11 @@ def admin_update_grade_enter_link(update: telegram.Update, context: telegram.ext
     return ADMIN_UPDATE_GRADE_ENTER_LINK
 
 def admin_homeworks_title(update: telegram.Update, context: telegram.ext.CallbackContext):
-    print("here")
     text = update.message.text
-    print("here")
     action = context.chat_data['action']
     # if the action is 'create' we must get the entered text. if the action is 'update' we must get the entered text unless it is 'skip'.
-    print("here")
     if (action == 'update' and text != SKIP_KEYWORD) or (action == 'create'):
         context.chat_data['homework_input']['title'] = text
-
-    print("here")
     if action == 'update':
         update.message.reply_text(ADMIN_HOMEWORK_SEND_FILE_OR_SKIP_MESSAGE, reply_markup=SKIP_CANCEL_KEYBOARD)
     elif action == 'create':
