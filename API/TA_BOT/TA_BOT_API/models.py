@@ -13,6 +13,9 @@ class AuthData(models.Model):
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
 
+    class Meta:
+        verbose_name_plural = "Auth Data"
+
 class UserManager(BaseUserManager):
 
     def create_user(self, email, first_name, last_name, password, student_id=None):
@@ -60,6 +63,9 @@ class TelegramActiveSessions(models.Model):
 class Category(models.Model):
     title = models.CharField(max_length=64)
     is_taught = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name_plural = "Categories"
 
 class Resource(models.Model):
     category = models.ForeignKey(Category, related_name='resources', on_delete=models.CASCADE)
