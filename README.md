@@ -1,6 +1,6 @@
 # TA BOT
 
-This project is an open source telegram bot which can be used as a teaching assistant bot if you are trying to find an easy and secure way to communicate with your students.
+This project is an open source Telegram bot which can be used as a teaching assistant bot if you are trying to find an easy and secure way to communicate with your students.
 
 # Features
 
@@ -170,7 +170,7 @@ python3 manage.py runserver 8000
 
 ### Fill the Students Authentication Data and Course Chapters
 
-​	You can use Django admin panel to fill the students authentication data. In order login to the panel you should go to `localhost:8000/admin` and enter the email and the password for superuser account. 
+​	You can use Django admin panel to fill the students authentication data. In order to login to the panel you should go to `localhost:8000/admin` and enter the email and the password for superuser account. 
 
 ​	Click the section `Auth Data`. Then you can use `import` button to import students data using a csv,xlsx,json,yaml,... file. The file must contain the fields id, password, email, first_name, last_name and student_id for each student.
 
