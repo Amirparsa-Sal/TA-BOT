@@ -184,6 +184,17 @@ Also, you can enter the course chapters in `Categories` section. these chapters 
 python3 bot.py
 ```
 
-
-
 Congratulations! The bot is up and running now :)
+
+# Admins Secret Commands(Not a secret anymore)
+
+They are just 2 more commands for admins:
+
+### /register_admin
+
+This command is used to register a chat as admin. The user should send an arbitrary email and then the bot asks for the secret key and if the secret key is entered correctly the chat will have the admin access to the bot.
+
+### /answer
+
+If the admin wants to answer a forwarded question, he/she should reply to that message with /answer command followed by the answer of the question. Ex: `/answer this question is not related to this topic...`
+
