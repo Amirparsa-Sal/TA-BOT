@@ -3,7 +3,7 @@ from django.contrib import admin
 
 # Register your models here.
 from import_export import resources
-from TA_BOT_API.models import AuthData
+from TA_BOT_API.models import AuthData, Category
 from import_export.admin import ImportExportModelAdmin
 from django.dispatch import receiver
 from import_export.signals import post_import
@@ -24,3 +24,4 @@ class AuthDataAdmin(ImportExportModelAdmin):
     resource_class = AuthDataResource
 
 admin.site.register(AuthData, AuthDataAdmin)
+admin.site.register(Category)
