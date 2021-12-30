@@ -2,6 +2,23 @@
 
 This project is an open source Telegram bot which can be used as a teaching assistant bot if you are trying to find an easy and secure way to communicate with your students.
 
+<a target="_blank" href="https://github.com/yurijserrano/LANGUAGES-TOOLS-LOGOS">
+	<img src="https://img.shields.io/badge/Python-blue?style=for-the-badge&color=094e87" />
+	<img src="https://github.com/yurijserrano/Github-Profile-Readme-Logos/blob/master/programming%20languages/python.svg" width="30" />
+</a>&nbsp;
+<a target="_blank" href="https://github.com/yurijserrano/LANGUAGES-TOOLS-LOGOS">
+	<img src="https://img.shields.io/badge/Django-gray?style=for-the-badge&color=555555" />
+	<img src="https://github.com/yurijserrano/Github-Profile-Readme-Logos/blob/master/frameworks/django.svg" width="30" />
+</a>&nbsp;
+ <a target="_blank" href="https://github.com/yurijserrano/LANGUAGES-TOOLS-LOGOS">
+	 <img src="https://img.shields.io/badge/Redis-red?style=for-the-badge&color=FF0000" />
+	 <img src="https://github.com/yurijserrano/Github-Profile-Readme-Logos/blob/master/databases/redis.svg" width="30" />
+</a>&nbsp;
+<a target="_blank" href="https://github.com/yurijserrano/LANGUAGES-TOOLS-LOGOS">
+	 <img src="https://img.shields.io/badge/Telegram-blue?style=for-the-badge&color=0088CC" />
+	 <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" width="30" />
+</a>&nbsp;
+
 # Features
 
 - ### Configurability
