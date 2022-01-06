@@ -1,13 +1,10 @@
-from calendar import calendar
-from os import chflags, stat
 import telegram
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
 import logging
 import environ
 import re
 from request_util import *
-from json import loads
-from decorators import not_authorized,is_authorized,get_last_login
+from decorators import get_last_login
 from lang import *
 from date_utils import *
 from file_utils import *
