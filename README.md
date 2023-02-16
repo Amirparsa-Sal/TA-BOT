@@ -18,8 +18,17 @@ This project is an open source Telegram bot which can be used as a teaching assi
 	 <img src="https://img.shields.io/badge/Telegram-blue?style=for-the-badge&color=0088CC" />
 	 <img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" width="30" />
 </a>&nbsp;
+<a target="_blank" href="https://github.com/yurijserrano/LANGUAGES-TOOLS-LOGOS">
+	 <img src="https://img.shields.io/badge/Docker-blue?style=for-the-badge&color=4990DF" />
+	 <img src="https://github.com/yurijserrano/Github-Profile-Readme-Logos/blob/master/cloud/docker.svg" width="30" />
+</a>&nbsp;
 
-# Features
+# Contents
+- ![Bot Features](#bot-features)
+- ![Deploying TA BOT](#deploying-ta-bot)
+- ![Admins Secret Commands](#admins-secret-commands)
+
+# Bot Features
 
 - ### Configurability
 
@@ -87,7 +96,6 @@ This project is an open source Telegram bot which can be used as a teaching assi
 
 ​	You follow this [guide](https://www.hostinger.com/tutorials/how-to-use-free-google-smtp-server) to create your Google SMTP account.
 
-​
 ### Set Environment Varibales
 In the root directory of the project create a `.env` file:
 
@@ -129,7 +137,7 @@ Also, you can enter the course chapters in `Categories` section. these chapters 
 
 Congratulations! The bot is up and running now :)
 
-# Admins Secret Commands(Not a secret anymore)
+# Admins Secret Commands
 
 They are just 2 more commands for admins:
 
