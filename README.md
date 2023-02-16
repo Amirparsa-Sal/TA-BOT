@@ -24,9 +24,9 @@ This project is an open source Telegram bot which can be used as a teaching assi
 </a>&nbsp;
 
 # Contents
-- ![Bot Features](#bot-features)
-- ![Deploying TA BOT](#deploying-ta-bot)
-- ![Admins Secret Commands](#admins-secret-commands)
+- [Bot Features](./#bot-features)
+- [Deploying TA BOT](./#deploying-ta-bot)
+- [Admins Secret Commands](./#admins-secret-commands)
 
 # Bot Features
 
