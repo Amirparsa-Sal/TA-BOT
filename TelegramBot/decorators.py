@@ -13,8 +13,8 @@ def get_last_login(func):
         # if bot token is empty login with bot as superuser
         if token is None:
             # getting email and password
-            email = env('BOT_API_EMAIL')
-            password = env('BOT_API_PASSWORD')
+            email = env('DJANGO_SUPERUSER_EMAIL')
+            password = env('DJANGO_SUPERUSER_PASSWORD')
             # logging in
             response,status = post(ApiUrls.LOGIN.value, username=email, password=password, chat_id=0)
             # if login is not successful rasie error
