@@ -83,107 +83,41 @@ This project is an open source Telegram bot which can be used as a teaching assi
 
 # Deploying TA BOT
 
-### install Python(>3)
-
-​	You can download and install the last version of the python from [here](https://www.python.org).
-
-### install and Start Redis
-
-​	You can download and install Redis from [here](https://redis.io/download).
-
-### Create a virtual Environment 
-
-​	while you are in the base folder of the project, run this command to create a new virtual environment:
-
-```bash
-python3 -m venv env
-```
-
-​	You can use any name instead of env.
-
-### Activate the Environment
-
-​	Run the following command to activate the virtual environment:
-
-```bash
-source env/bin/activate
-```
-
-### Install The Requirements
-
-​	Inside the root folder of the project, run the following command. to install the python required modules:
-
-```bash
-pip3 install -r requirements.txt
-```
-
 ### Create Your Google SMTP Account and Config the Backend
 
 ​	You follow this [guide](https://www.hostinger.com/tutorials/how-to-use-free-google-smtp-server) to create your Google SMTP account.
 
-​	Next, go to `API/TA_BOT/TA_BOT` and create a `.env` file:
+​
+### Set Environment Varibales
+In the root directory of the project create a `.env` file:
 
 ```bash
 touch .env
 ```
 
-​	You must specify 4 items in that file. The first three items are related to the smtp account and the last one is the secret key which you use to access the admin panel.
+You must specify the following items:
 
 ```bash
-EMAIL_HOST=smtp.gmail.com
-EMAIL_HOST_USER=example@gmail.com
-EMAIL_HOST_PASSWORD=example_password
-SECRET_KEY=example_secret
+EMAIL_HOST=smtp.gmail.com #Your SMTP host
+EMAIL_HOST_USER=example@gmail.com #Your SMTP account email
+EMAIL_HOST_PASSWORD=example_password #Your SMTP account password
+
+SECRET_KEY=example_secret #Secret key of API (must be secure enough)
+
+DJANGO_SUPERUSER_EMAIL=example@gmail.com #The superuser email for API
+DJANGO_SUPERUSER_PASSWORD=example_password #The superuser password for API
+
+BOT_TOKEN=example_bot_token #Your telegram bot token
+
+UNI_EMAIL_REGEX=^[A-Za-z0-9._%+-]+@aut.ac.ir #A regex for valid emails which can be used for registration
 ```
 
+### Running the bot
 
-
-### Migrate the database
-
-​	Go to `API/TA_BOT` and migrate the database to create a SQLite database:
-
+To run the bot simply execute the following command:
 ```bash
-python3 manage.py migrate
+docker-compose up -d --build
 ```
-
-### Create a Superuser
-
-​	Go to `API/TA_BOT` and create a superuser using this command:
-
-```bash
-python3 manage.py createsuperuser
-```
-
-​	Then you should enter an email and a password for superuser. The bot will use this superuser account to access some restricted APIs. So, remember that email and password because we need to set them in another .env file.
-
-### Config the Telegram Bot
-
-​	Go to `TelegramBot` folder and create another `.env` file:
-
-```bash
-touch .env
-```
-
-​	You should specify 4 things in this file. Firstly, you should enter the bot token which you have generated using the BotFather. After that you should specify the email and password you used to create the superuser account, and finally there is an optional field which you can specify your own academic email regex to validate users. If you dont specify the regex, the default regex is for Amirkabir University Of Technology(****@aut.ac.ir)
-
-```
-BOT_TOKEN=example_token
-
-BOT_API_EMAIL=the_email_you_used_to_create_superuser_account
-BOT_API_PASSWORD=the_password_you_used_to_create_superuser_account
-
-UNI_EMAIL_REGEX=^[A-Za-z0-9._%+-]+@aut.ac.ir
-```
-
-### Run the Django Server
-
-​	Go to `API/TA_BOT` and run the following command:
-
-```
-python3 manage.py runserver 8000
-```
-
-​	You can use your arbitrary port numbe(instead of 8000) to deploy the backend server.
 
 ### Fill the Students Authentication Data and Course Chapters
 
@@ -192,14 +126,6 @@ python3 manage.py runserver 8000
 ​	Click the section `Auth Data`. Then you can use `import` button to import students data using a csv,xlsx,json,yaml,... file. The file must contain the fields id, password, email, first_name, last_name and student_id for each student.
 
 Also, you can enter the course chapters in `Categories` section. these chapters are used to sort the resources and to show the timeline of the course which you can edit it in telegram admin panel.
-
-### Run the Telegram Bot
-
-​	Finally, go to `TelegramBot` folder and run the following command:
-
-```bash
-python3 bot.py
-```
 
 Congratulations! The bot is up and running now :)
 
