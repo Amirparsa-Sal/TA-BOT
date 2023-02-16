@@ -29,6 +29,16 @@ services:
     networks:
       - ta_bot_net
 
+  bot:
+    build: ./TelegramBot
+    restart: always
+    env_file:
+      - ./TelegramBot/.env
+    depends_on:
+      - bot_api
+    networks:
+      - ta_bot_net
+
 networks:
   ta_bot_net:
     driver: bridge
