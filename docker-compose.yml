@@ -21,7 +21,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./API/TA_BOT/TA_BOT/.env
+      - ./.env
     volumes:
       - ./db:/app/db/
     depends_on:
@@ -33,7 +33,7 @@ services:
     build: ./TelegramBot
     restart: always
     env_file:
-      - ./TelegramBot/.env
+      - ./.env
     depends_on:
       - bot_api
     networks:
