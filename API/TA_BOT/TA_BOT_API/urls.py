@@ -1,9 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from rest_framework.routers import DefaultRouter
-from telegram.bot import Bot
-
 from .views import AdminQuestionAnswerView, AuthView, CustomAuthToken, MemberCategoryView, AdminCategoryView, \
     AdminResourceView, AdminHomeWorkView, AdminNotificationsView, MemberHomeworkView, \
     BotMetaDataView, MemberQuestionAnswerView
