@@ -3,13 +3,17 @@ import requests
 import re
 import os
 from file_utils import get_file_name
+import environ
+
+env = environ.Env()
+environ.Env.read_env()
 
 class ApiUrls(Enum):
     '''An enum for request urls'''
     
-    BASE_URL = 'http://127.0.0.1:8000'
+    BASE_URL = f"http://{env('API_HOST')}:8000/"
 
-    BASE_API_URL = 'http://127.0.0.1:8000/api/'
+    BASE_API_URL = BASE_URL + 'api/'
 
     ###### Auth Urls
     AUTH_BASE = BASE_API_URL + 'auth/'
