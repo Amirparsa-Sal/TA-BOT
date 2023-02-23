@@ -3,7 +3,7 @@ from django.contrib import admin
 
 # Register your models here.
 from import_export import resources
-from TA_BOT_API.models import AuthData, Category
+from TA_BOT_API.models import AuthData, Category, TelegramActiveSessions
 from import_export.admin import ImportExportModelAdmin
 from django.dispatch import receiver
 from import_export.signals import post_import
@@ -25,3 +25,4 @@ class AuthDataAdmin(ImportExportModelAdmin):
 
 admin.site.register(AuthData, AuthDataAdmin)
 admin.site.register(Category)
+admin.site.register(TelegramActiveSessions)
