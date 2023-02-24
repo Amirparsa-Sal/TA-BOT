@@ -1,6 +1,4 @@
-FROM python:3.12.0a5-alpine3.17
-
-WORKDIR /app
+FROM python:3.8-slim
 
 COPY requirements.txt requirements.txt
 

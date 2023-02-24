@@ -3,3 +3,5 @@ djangorestframework==3.12.4
 django-environ==0.7.0
 redis==3.5.3
 django-import-export==2.7.1
+sqlparse==0.4.2
+psycopg2-binary==2.9.3

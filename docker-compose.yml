@@ -11,6 +11,20 @@ services:
     networks:
       - ta_bot_net
 
+  db:
+    image: postgres:15
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - ta_bot_postgres:/var/lib/postgresql/data
+    env_file:
+      - ./.env
+    environment:
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    networks:
+      - ta_bot_net
+
   api:
     build: ./API/TA_BOT
     command: >
@@ -27,6 +41,7 @@ services:
       - ./db:/app/db/
     depends_on:
       - redis
+      - db
     networks:
       - ta_bot_net
 
@@ -45,3 +60,6 @@ services:
 networks:
   ta_bot_net:
     driver: bridge
+
+volumes:
+  ta_bot_postgres:
