@@ -28,8 +28,8 @@ services:
   api:
     build: ./API/TA_BOT
     command: >
-      sh -c "python3 -u manage.py migrate &&
-            python3 -u manage.py runserver 0.0.0.0:8000"
+      sh -c "python3 manage.py migrate &&
+            python3 manage.py runserver 0.0.0.0:8000"
     restart: always
     ports:
       - "8000:8000"
@@ -37,6 +37,7 @@ services:
       - ./.env
     environment:
       - API_HOST=api
+      - PYTHONUNBUFFERED=1 
     volumes:
       - ./db:/app/db/
     depends_on:
