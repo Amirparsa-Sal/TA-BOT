@@ -159,6 +159,7 @@ class AuthView(ViewSet):
                     message=settings.EMAIL_MESSAGE_FORMAT.format(otp=otp)
                 )
             except Exception as e:
+                print(e)
                 raise APIException('Failed to send the email!')
             
             return Response(data={}, status=status.HTTP_200_OK)
