@@ -139,12 +139,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'TA_BOT_API.User'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = env('EMAIL_HOST')
-EMAIL_PORT = int(env('EMAIL_PORT'))
-EMAIL_USE_TLS = env('EMAIL_USE_TLS') == True
-EMAIL_HOST_USER = env('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+SENDGRID_API_KEY = env('SENDGRID_API_KEY')
+EMAIL_SENDER=env('EMAIL_SENDER')
+EMAIL_SUBJECT = "CI Bot Verification Code"
+EMAIL_MESSAGE_FORMAT = "Here is your verification code for registeration: {otp}"
 
 REDIS_HOST = 'redis'
 REDIS_PORT = 6379

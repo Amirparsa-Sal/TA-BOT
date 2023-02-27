@@ -1,6 +1,5 @@
 from os import stat
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
 from django.db.models.query_utils import Q
 from django.utils.crypto import get_random_string
 from django.conf import settings
@@ -20,8 +19,8 @@ from .serializers import AnswerSerializer, ChatIdMessageIdSerializer, GradeSeria
 
 from .models import AuthData, Category, Grade, QuestionAnswer, TelegramActiveSessions, Resource, HomeWork
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException, AuthDataNotFoundException
+from .utils import send_email
 
-from smtplib import SMTPException
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
 
@@ -149,17 +148,19 @@ class AuthView(ViewSet):
             otp = get_random_string(length=5, allowed_chars='0123456789')
             redis_instance.set(name=email.lower(), value=otp, ex= 60 * 5)
             
-            # Send OTP via email
-            try:    
-                send_mail(
-                    'C Fall 2021 Bot Registeration',
-                    f'your confirmation code is: {otp}',
-                    'from@example.com',
-                    [email],
-                    fail_silently=False,
+            try:
+                send_email(
+                    email_host=settings.EMAIL_HOST,
+                    host_port=settings.EMAIL_PORT,
+                    sender_email=settings.EMAIL_SENDER,
+                    password=settings.EMAIL_PASSWORD,
+                    receiver_email=email,
+                    subject=settings.EMAIL_SUBJECT,
+                    message=settings.EMAIL_MESSAGE_FORMAT.format(otp=otp)
                 )
-            except SMTPException as e:
-                raise APIException('Can not send the email.')
+            except Exception as e:
+                raise APIException('Failed to send the email!')
+            
             return Response(data={}, status=status.HTTP_200_OK)
         raise ValidationError(detail='The data is not valid!')
 
