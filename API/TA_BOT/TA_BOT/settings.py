@@ -140,6 +140,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'TA_BOT_API.User'
 
 EMAIL_SENDER=env('EMAIL_SENDER')
+EMAIL_PASSWORD=env('EMAIL_PASSWORD')
+EMAIL_HOST=env('EMAIL_HOST')
+EMAIL_PORT=int(env('EMAIL_PORT'))
 EMAIL_SUBJECT = "CI Bot Verification Code"
 EMAIL_MESSAGE_FORMAT = "Here is your verification code for registeration: {otp}"
 
