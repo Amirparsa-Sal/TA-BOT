@@ -14,8 +14,8 @@ from rest_framework.exceptions import APIException, NotFound, ValidationError
 from rest_framework.authtoken.models import Token
 
 
-from .serializers import AnswerSerializer, ChatIdMessageIdSerializer, GradeSerializer, QuestionAnswerSerializer, QuestionSerializer, ResourcePartialUpdateSerializer, UserRegisterSerializer, AccountActivitionSerializer,AdminRegisterSerializer, \
-    ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer \
+from .serializers import AnswerSerializer, ChatIdMessageIdSerializer, GradeSerializer, QuestionAnswerSerializer, QuestionSerializer, ResourcePartialUpdateSerializer, UserRegisterSerializer, VerifyOTPSerializer,AdminRegisterSerializer, \
+    ChatIdSerializer, CategorySerilizer, ResourceSerializer, HomeWorkSerializer, HomeWorkPartialUpdateSerializer, SetPasswordSerializer \
 
 from .models import AuthData, Category, Grade, QuestionAnswer, TelegramActiveSessions, Resource, HomeWork
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException, AuthDataNotFoundException
@@ -25,6 +25,8 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
 
 from django.db import transaction
+
+from hashlib import sha256
 
 import redis
 
@@ -166,9 +168,9 @@ class AuthView(ViewSet):
         return Response(data={}, status=status.HTTP_200_OK)
     
 
-    def activate_account(self, request):
+    def verify_otp(self, request):
         '''POST: Activates the account if the email and otp are valid.'''
-        seri = AccountActivitionSerializer(data=request.data)
+        seri = VerifyOTPSerializer(data=request.data)
         # if json is not valid raise error
         if not seri.is_valid():
             raise ValidationError(detail='The data is not valid!')
@@ -178,24 +180,48 @@ class AuthView(ViewSet):
         given_otp = seri.validated_data.get('otp')
 
         # Checking if the user has requested an otp
-        otp = redis_instance.get(email)
+        otp = redis_instance.get(email.lower())
         if otp is None:
-            raise NoOtpException(detail='شما تا حالا درخواست فرستادن رمز یک بار مصرف ندادید!')
+            raise NoOtpException(detail='شما تا حالا درخواست فرستادن رمز یک بار مصرف ندادید یا مهلت ارسال رمز به اتمام رسیده است.!')
         # Checking if the otp is correct
         if given_otp != otp.decode('utf-8'):
             raise OtpMismatchException(detail='رمز یک بار مصرف وارد شده اشتباهه! لطفا دوباره واردش کن!')
 
-        # Activate account
+        # set a digest for setting password 
+        digest = str(sha256(otp).hexdigest())
+        redis_instance.set(name=email.lower(), value=digest, ex= 60 * 5)
+        
+        return Response(data={'digest': digest}, status=status.HTTP_200_OK)
+
+    def set_password(self, request):
+        seri = SetPasswordSerializer(data=request.data)
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # Getting request data
+        email = seri.validated_data.get('email').lower()
+        given_digest = seri.validated_data.get('digest')
+        password = seri.validated_data.get('password')
+
+        # check if digest exists
+        digest = redis_instance.get(email)
+        if digest is None:
+            raise NoOtpException(detail='رمز یک بار مصرف تایید نشده یا مهلت تنظیم رمز عبور به پایان رسیده است.')
+        
+        # check if digest is correct
+        if given_digest != digest.decode('utf-8'):
+            raise ValidationError(detail='The digest is not valid!')
+        
+        # delete redis item
+        redis_instance.delete(email)
+
+        # Activate account and set password
         user = user_model.objects.get(email__iexact=email)
         user.is_active = True
+        user.set_password(password)
         user.save()
-
-        # Delete email from redis
-        redis_instance.delete(email)
-        
         return Response(data={}, status=status.HTTP_200_OK)
-
-        
 
     def register_admin(self, request):
         '''

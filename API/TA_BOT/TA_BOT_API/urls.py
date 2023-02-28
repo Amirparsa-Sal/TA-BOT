@@ -10,8 +10,12 @@ auth_send_otp = AuthView.as_view({
     'post': 'register_user'
 })
 
-account_activition = AuthView.as_view({
-    'post': 'activate_account'
+verify_otp = AuthView.as_view({
+    'post': 'verify_otp'
+})
+
+set_password = AuthView.as_view({
+    'post': 'set_password'
 })
 
 register_admin = AuthView.as_view({
@@ -151,7 +155,8 @@ member_my_questions = MemberQuestionAnswerView.as_view({
 
 urlpatterns = [
     path('auth/send-otp/', auth_send_otp),
-    path('auth/activate-account/', account_activition),
+    path('auth/verify-otp/', verify_otp),
+    path('auth/set-password/', set_password),
     path('auth/register-admin/', register_admin),
     path('auth/login/', CustomAuthToken.as_view()),
     path('auth/logout/', logout),

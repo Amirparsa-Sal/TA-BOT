@@ -9,10 +9,18 @@ class UserRegisterSerializer(serializers.Serializer):
     '''A serializer to get inputs of user registeration api. It recieves email and chat_id as inputs.'''
     email = serializers.EmailField()
 
-class AccountActivitionSerializer(serializers.Serializer):
+class VerifyOTPSerializer(serializers.Serializer):
     '''A serializer to get inputs of acccount activision api. It recieves chat_id and otp as inputs.'''
     email = serializers.EmailField()
     otp = serializers.CharField(validators=[validate_integer, MinLengthValidator(5), MaxLengthValidator(5)])
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    '''A serializer to get inputs of set password activision api. It recieves email, password and digest as inputs.'''
+    email = serializers.EmailField()
+    password = serializers.CharField(validators=[MaxLengthValidator(4096)])
+    digest = serializers.CharField(validators=[MinLengthValidator(64), MaxLengthValidator(64)])
+
 
 class AdminRegisterSerializer(serializers.Serializer):
     '''This is a serializer for admin registeration. it recieves email,chat_id and secret key as inputs.'''
