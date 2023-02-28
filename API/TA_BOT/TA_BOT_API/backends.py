@@ -18,9 +18,10 @@ class AuthenticationBackend(ModelBackend):
             if user.check_password(password):
                 if user.is_superuser:
                     return user
-                chat_id = int(request.data.get('chat_id'))
+                chat_id = request.data.get('chat_id', None)
                 if chat_id is None:
                     raise ValidationError('Chat_id is not sent in response body!')
+                chat_id = int(chat_id)
                 sessions = [session.chat_id for session in user.active_sessions.all()]
                 if chat_id not in sessions:
                     new_session = TelegramActiveSessions(chat_id=chat_id, user=user)
