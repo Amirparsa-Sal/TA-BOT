@@ -231,7 +231,7 @@ class AuthView(ViewSet):
         seri = AdminRegisterSerializer(data=request.data)
         # if json is not valid raise error
         if not seri.is_valid():
-            raise ValidationError(detail='The data is not valid!')
+            raise ValidationError(detail=f'The data is not valid!')
         
         # Getting request data
         email = seri.validated_data.get('email')
@@ -248,7 +248,7 @@ class AuthView(ViewSet):
         except user_model.DoesNotExist:
             user_model.objects.create_superuser(email, secret)
         
-        raise ValidationError(detail='The data is not valid!')
+        return Response(data={}, status=status.HTTP_200_OK)
 
     def logout(self, request):
         '''POST: Logs out from the account. It deletes the active session corresponding to that chat_id.'''
