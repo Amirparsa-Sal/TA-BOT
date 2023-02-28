@@ -123,76 +123,79 @@ class AuthView(ViewSet):
     def register_user(self, request):
         '''POST: Sends the otp password to the given email if the email is not registered.'''
         seri = UserRegisterSerializer(data=request.data)
-        # Checking if the email is valid
-        if seri.is_valid():
-            email = seri.validated_data.get('email')
-
-            # Checking if the email already exsits in redis keys
-            otp = redis_instance.get(email.lower())
-            if otp is None:
-                # Checking if the user has registered before
-                try:
-                    user = user_model.objects.get(email__iexact=email)
-                    # Checking if the user has activated his/her account already
-                    if user.is_active:
-                        raise UserAlreadyExistsException(detail='یه کاربر قبلا با این ایمیل ثبت نام کرده! یه ایمیل دیگه وارد کن!')
-                except user_model.DoesNotExist:
-                    # Create a new user if user does not exist
-                    try:
-                        auth_data = AuthData.objects.get(email__iexact=email)
-                        user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.password, student_id=auth_data.student_id)
-                    except AuthData.DoesNotExist:
-                        raise AuthDataNotFoundException(detail='اطلاعات مربوط به این ایمیل در بات ثبت نشده! لطفا دوباره ایمیل رو وارد کن!')
-            
-            # Create OTP and save in redis
-            otp = get_random_string(length=5, allowed_chars='0123456789')
-            redis_instance.set(name=email.lower(), value=otp, ex= 60 * 5)
-            
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # otherwise continue to do registeration
+        email = seri.validated_data.get('email')
+        # Checking if the email already exists in redis keys
+        otp = redis_instance.get(email.lower())
+        if otp is None:
+            # Checking if the user has registered before
             try:
-                send_email(
-                    email_host=settings.EMAIL_HOST,
-                    host_port=settings.EMAIL_PORT,
-                    sender_email=settings.EMAIL_SENDER,
-                    password=settings.EMAIL_PASSWORD,
-                    receiver_email=email,
-                    subject=settings.EMAIL_SUBJECT,
-                    message=settings.EMAIL_MESSAGE_FORMAT.format(otp=otp)
-                )
-            except Exception as e:
-                print(e)
-                raise APIException('Failed to send the email!')
-            
-            return Response(data={}, status=status.HTTP_200_OK)
-        raise ValidationError(detail='The data is not valid!')
+                user = user_model.objects.get(email__iexact=email)
+                # Checking if the user has activated his/her account already
+                if user.is_active:
+                    raise UserAlreadyExistsException(detail='یه کاربر قبلا با این ایمیل ثبت نام کرده! یه ایمیل دیگه وارد کن!')
+            except user_model.DoesNotExist:
+                # Create a new user if user does not exist
+                try:
+                    auth_data = AuthData.objects.get(email__iexact=email)
+                    user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.password, student_id=auth_data.student_id)
+                except AuthData.DoesNotExist:
+                    raise AuthDataNotFoundException(detail='اطلاعات مربوط به این ایمیل در بات ثبت نشده! لطفا دوباره ایمیل رو وارد کن!')
+        
+        # Create OTP and save in redis
+        otp = get_random_string(length=5, allowed_chars='0123456789')
+        redis_instance.set(name=email.lower(), value=otp, ex= 60 * 5)
+        # send OTP with email
+        try:
+            send_email(
+                email_host=settings.EMAIL_HOST,
+                host_port=settings.EMAIL_PORT,
+                sender_email=settings.EMAIL_SENDER,
+                password=settings.EMAIL_PASSWORD,
+                receiver_email=email,
+                subject=settings.EMAIL_SUBJECT,
+                message=settings.EMAIL_MESSAGE_FORMAT.format(otp=otp)
+            )
+        except Exception:
+            raise APIException('Failed to send the email!')
+        
+        return Response(data={}, status=status.HTTP_200_OK)
+    
 
     def activate_account(self, request):
         '''POST: Activates the account if the email and otp are valid.'''
         seri = AccountActivitionSerializer(data=request.data)
-        # Checking if the request data is valid
-        if seri.is_valid():
-            # Getting request data
-            email = seri.validated_data.get('email')
-            given_otp = seri.validated_data.get('otp')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # Getting request data
+        email = seri.validated_data.get('email')
+        given_otp = seri.validated_data.get('otp')
 
-            # Checking if the user has requested an otp
-            otp = redis_instance.get(email)
-            if otp is None:
-                raise NoOtpException(detail='شما تا حالا درخواست فرستادن رمز یک بار مصرف ندادید!')
-            # Checking if the otp is correct
-            if given_otp != otp.decode('utf-8'):
-                raise OtpMismatchException(detail='رمز یک بار مصرف وارد شده اشتباهه! لطفا دوباره واردش کن!')
+        # Checking if the user has requested an otp
+        otp = redis_instance.get(email)
+        if otp is None:
+            raise NoOtpException(detail='شما تا حالا درخواست فرستادن رمز یک بار مصرف ندادید!')
+        # Checking if the otp is correct
+        if given_otp != otp.decode('utf-8'):
+            raise OtpMismatchException(detail='رمز یک بار مصرف وارد شده اشتباهه! لطفا دوباره واردش کن!')
 
-            # Activate account
-            user = user_model.objects.get(email__iexact=email)
-            user.is_active = True
-            user.save()
+        # Activate account
+        user = user_model.objects.get(email__iexact=email)
+        user.is_active = True
+        user.save()
 
-            # Delete email from redis
-            redis_instance.delete(email)
-            
-            return Response(data={}, status=status.HTTP_200_OK)
+        # Delete email from redis
+        redis_instance.delete(email)
+        
+        return Response(data={}, status=status.HTTP_200_OK)
 
-        raise ValidationError(detail='The data is not valid!')
+        
 
     def register_admin(self, request):
         '''
@@ -200,40 +203,42 @@ class AuthView(ViewSet):
         The secret key is placed in .env file in TA_BOT folder.
         '''
         seri = AdminRegisterSerializer(data=request.data)
-        # Checking if the request data is valid
-        if seri.is_valid():
-            # Getting request data
-            email = seri.validated_data.get('email')
-            given_secret = seri.validated_data.get('secret')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # Getting request data
+        email = seri.validated_data.get('email')
+        given_secret = seri.validated_data.get('secret')
 
-            # Checking if the secret key is correct
-            if given_secret != secret:
-                raise InvalidSecretKey(detail='رمز وارد شده اشتباهه! دوباره واردش کن!')
-            
-            # Checking if a user with that email already exists
-            try:
-                user_model.objects.get(email__iexact=email)
-                raise UserAlreadyExistsException(detail='یه کاربر با این ایمیل تو بات وجود داره! یه ایمیل دیگه وارد کن!')
-            except user_model.DoesNotExist:
-                user_model.objects.create_superuser(email, secret)
-
-            return Response(data={}, status=status.HTTP_200_OK) 
+        # Checking if the secret key is correct
+        if given_secret != secret:
+            raise InvalidSecretKey(detail='رمز وارد شده اشتباهه! دوباره واردش کن!')
+        
+        # Checking if a user with that email already exists
+        try:
+            user_model.objects.get(email__iexact=email)
+            raise UserAlreadyExistsException(detail='یه کاربر با این ایمیل تو بات وجود داره! یه ایمیل دیگه وارد کن!')
+        except user_model.DoesNotExist:
+            user_model.objects.create_superuser(email, secret)
         
         raise ValidationError(detail='The data is not valid!')
 
     def logout(self, request):
         '''POST: Logs out from the account. It deletes the active session corresponding to that chat_id.'''
         seri = ChatIdSerializer(data=request.data)
-        if seri.is_valid():
-            chat_id = seri.validated_data.get('chat_id')
-            
-            # Delete chat_id from user sessions
-            user = request.user
-            user.active_sessions.filter(chat_id=chat_id).delete()
-
-            return Response(data={}, status=status.HTTP_200_OK) 
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
         
-        raise ValidationError(detail='The data is not valid!')
+        # get chat_id from request data
+        chat_id = seri.validated_data.get('chat_id')
+        
+        # Delete chat_id from user sessions
+        user = request.user
+        user.active_sessions.filter(chat_id=chat_id).delete()
+
+        return Response(data={}, status=status.HTTP_200_OK) 
         
 
 class MemberCategoryView(ViewSet):
@@ -266,19 +271,22 @@ class MemberCategoryView(ViewSet):
     def add_question(self, request, cat_id):
         '''POST: Adds a question to the category given the cat_id and question.'''
         seri = self.question_serializer_class(data=request.data)
-        # Checking if the question is valid
-        if seri.is_valid():
-            try:
-                # Finding the category
-                category = Category.objects.get(pk=cat_id)
-                # Creating the question
-                question_answer = QuestionAnswer(question=seri.validated_data['question'], source_chat_id=seri.validated_data['chat_id'], user=request.user, category=category)
-                question_answer.save()
-                seri = self.question_answer_serializer_class(question_answer)
-                return Response(data=seri.data, status=status.HTTP_200_OK)
-            except Category.DoesNotExist:
-                raise NotFound(detail=f'Category(id = {cat_id}) not found!')
-        raise ValidationError(detail=seri.errors)
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+
+        # try to find the category
+        try:
+            # Finding the category
+            category = Category.objects.get(pk=cat_id)
+            # Creating the question
+            question_answer = QuestionAnswer(question=seri.validated_data['question'], source_chat_id=seri.validated_data['chat_id'], user=request.user, category=category)
+            question_answer.save()
+            seri = self.question_answer_serializer_class(question_answer)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+    
 
 class AdminCategoryView(ViewSet):
     '''This is a view for course syllabes for admins. We call them category.'''
@@ -311,20 +319,22 @@ class AdminCategoryView(ViewSet):
     def add_resource(self, request, cat_id):
         '''POST: Adds a resource to the category given its cat_id and resource details.'''
         seri = ResourceSerializer(data=request.data)
-        # Checking if the resource details is valid
-        if seri.is_valid():
-            # Checking if the category exists
-            try:
-                category = Category.objects.get(pk=cat_id)
-                # Creating the resource
-                resource = Resource(title=seri.validated_data.get('title'), \
-                                    link=seri.validated_data.get('link'),
-                                    category=category)
-                resource.save()
-                return Response(data=seri.data, status=status.HTTP_200_OK)
-            except Category.DoesNotExist:
-                raise NotFound(detail=f'Category(id = {cat_id}) not found!')
-        raise ValidationError(detail='The data is not valid!')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # Checking if the category exists
+        try:
+            category = Category.objects.get(pk=cat_id)
+            # Creating the resource
+            resource = Resource(title=seri.validated_data.get('title'), \
+                                link=seri.validated_data.get('link'),
+                                category=category)
+            resource.save()
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Category.DoesNotExist:
+            raise NotFound(detail=f'Category(id = {cat_id}) not found!')
+        
         
 
     def get_all_resources(self, request, cat_id):
@@ -359,20 +369,20 @@ class AdminResourceView(ViewSet):
     def update_resource(self, request, res_id):
         '''PATCH: Partially updates the details of a resource given its res_id.'''
         seri = ResourcePartialUpdateSerializer(data=request.data)
-        # Checking of the reqiest data is valid
-        if seri.is_valid():
-            # Checking if the resource exists
-            try:
-                res = Resource.objects.get(pk=res_id)
-                # Partially update the fields
-                res.title = seri.validated_data.get('title', res.title)
-                res.link = seri.validated_data.get('link', res.link)
-                res.save()
-                return Response(data=seri.data, status=status.HTTP_200_OK)
-            except Resource.DoesNotExist:
-                raise NotFound(detail=f'Resource(id = {res_id}) not found!')
-        raise ValidationError(detail='The data is not valid!')
-        
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+    
+        # Checking if the resource exists
+        try:
+            res = Resource.objects.get(pk=res_id)
+            # Partially update the fields
+            res.title = seri.validated_data.get('title', res.title)
+            res.link = seri.validated_data.get('link', res.link)
+            res.save()
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except Resource.DoesNotExist:
+            raise NotFound(detail=f'Resource(id = {res_id}) not found!')
 
     def delete_resource(self, request, res_id):
         '''DELETE: deletes a resource given its res_id.'''
@@ -416,17 +426,19 @@ class AdminHomeWorkView(ViewSet):
     def create_homework(self, request):
         '''POST: Creates a new homework given its details.'''
         seri = self.serializer_class(data=request.data)
-        # Checking if the data is valid
-        if seri.is_valid():
-            # Creating the homework
-            hw = HomeWork(title=seri.validated_data.get('title'), \
-                          file_id=seri.validated_data.get('file_id'), \
-                          published=seri.validated_data.get('published'), \
-                          due_date_time=seri.validated_data.get('due_date_time'))
-            hw.save()
-            seri = self.serializer_class(hw)
-            return Response(data=seri.data, status=status.HTTP_200_OK)
-        raise ValidationError(detail='The data is not valid!')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # Creating the homework
+        hw = HomeWork(title=seri.validated_data.get('title'), \
+                        file_id=seri.validated_data.get('file_id'), \
+                        published=seri.validated_data.get('published'), \
+                        due_date_time=seri.validated_data.get('due_date_time'))
+        hw.save()
+        seri = self.serializer_class(hw)
+        return Response(data=seri.data, status=status.HTTP_200_OK)
+        
 
     def delete_homework(self, request, hw_id=None):
         '''DELETE: Deletes the homework given its hw_id.'''
@@ -436,48 +448,51 @@ class AdminHomeWorkView(ViewSet):
     def update_homework(self, request, hw_id=None):
         '''PATCH: Partially updates the homework given its hw_id and details.'''
         seri = self.update_serializer_class(data=request.data)
-        # Checking if the data is valid
-        if seri.is_valid():
-            # Checking if the hw exists
-            try:
-                hw = HomeWork.objects.get(pk=hw_id)
-                # Partially update the fields
-                hw.title = seri.validated_data.get('title',hw.title)
-                hw.file_id = seri.validated_data.get('file_id', hw.file_id)
-                hw.due_date_time = seri.validated_data.get('due_date_time', hw.due_date_time)
-                hw.published = seri.validated_data.get('published', hw.published)
-                hw.save()
-                seri = self.serializer_class(hw)
-                return Response(data=seri.data, status=status.HTTP_200_OK)
-            except HomeWork.DoesNotExist:
-                raise NotFound(detail=f'homework(id= {hw_id}) not found!')
-        raise ValidationError(detail='The data is not valid!')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        # Checking if the hw exists
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            # Partially update the fields
+            hw.title = seri.validated_data.get('title',hw.title)
+            hw.file_id = seri.validated_data.get('file_id', hw.file_id)
+            hw.due_date_time = seri.validated_data.get('due_date_time', hw.due_date_time)
+            hw.published = seri.validated_data.get('published', hw.published)
+            hw.save()
+            seri = self.serializer_class(hw)
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+        
 
     def update_grade(self, request, hw_id=None):
         '''PUT: Updates the grade of a homework given the hw_id and grade details.'''
         seri = self.grade_serializer_class(data=request.data)
-        # Checking if the request data is valid
-        if seri.is_valid():
-            # Checking if the homework exists.
-            try:
-                hw = HomeWork.objects.get(pk=hw_id)
-                grade = hw.grade
-                # Update the grade if exists
-                if grade is not None:
-                    grade.link = seri.validated_data.get('link')
-                    grade.published = seri.validated_data.get('published')
-                    grade.save()
-                # Creeate the grade if not exists
-                else:
-                    grade = Grade(link=seri.validated_data.get('link'), published=seri.validated_data.get('published'))
-                    grade.save()
-                    hw.grade = grade
-                    hw.save()
-                return Response(data=seri.data, status=status.HTTP_200_OK)
-            except HomeWork.DoesNotExist:
-                raise NotFound(detail=f'homework(id= {hw_id}) not found!')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+    
+        # Checking if the homework exists.
+        try:
+            hw = HomeWork.objects.get(pk=hw_id)
+            grade = hw.grade
+            # Update the grade if exists
+            if grade is not None:
+                grade.link = seri.validated_data.get('link')
+                grade.published = seri.validated_data.get('published')
+                grade.save()
+            # Create the grade if not exists
+            else:
+                grade = Grade(link=seri.validated_data.get('link'), published=seri.validated_data.get('published'))
+                grade.save()
+                hw.grade = grade
+                hw.save()
+            return Response(data=seri.data, status=status.HTTP_200_OK)
+        except HomeWork.DoesNotExist:
+            raise NotFound(detail=f'homework(id= {hw_id}) not found!')
 
-        raise ValidationError(detail=seri.errors)
 
     def delete_grade(self ,request, hw_id=None):
         '''DELETE: Deletes the homework given its hw_id.'''
@@ -582,51 +597,58 @@ class AdminNotificationsView(ViewSet):
     def get_incoming_notif_status(self, request):
         '''GET: Gets the status of incoming notification settings. if its true the admin can recieve notifs.'''
         # Get chat_id from queery param
-        chat_id = int(request.GET.get('chat_id', None))
-        # Check if chat_id is given
-        if chat_id is not None:
-            user = request.user
-            # Find the corresponding active session and turn allow_notif on
-            try:
-                active_session = TelegramActiveSessions.objects.get(user=user, chat_id=chat_id)
-                return Response(data={'status': active_session.allow_notif}, status=status.HTTP_200_OK)
-            except:
-                raise NotFound('User telegram session not found!')
-        raise ValidationError('Chat id must be passed!')
+        chat_id = request.GET.get('chat_id', None)
+        # if chat_id is not given
+        if chat_id is None:
+            raise ValidationError('Chat id must be passed!')
+        
+        chat_id = int(chat_id)
+        user = request.user
+        # Find the corresponding active session and turn allow_notif on
+        try:
+            active_session = TelegramActiveSessions.objects.get(user=user, chat_id=chat_id)
+            return Response(data={'status': active_session.allow_notif}, status=status.HTTP_200_OK)
+        except:
+            raise NotFound('User telegram session not found!')
+    
 
     def enable_notif(self, request):
         '''POST: Enables the incoming notification settings for a particular chat_id.'''        
         seri = self.serializer_class(data=request.data)
-        # Checking if the request data is valid
-        if seri.is_valid():
-            chat_id = int(seri.validated_data['chat_id'])
-            # Checking if an active session exists for that chat_id
-            try:
-                active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
-                # Enable allow_notif
-                active_session.allow_notif = True
-                active_session.save()
-                return Response(data=None, status=status.HTTP_200_OK)
-            except:
-                raise NotFound('User telegram session not found!')
-        raise ValidationError('Chat id must be passed in body!')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        chat_id = int(seri.validated_data['chat_id'])
+        # Checking if an active session exists for that chat_id
+        try:
+            active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+            # Enable allow_notif
+            active_session.allow_notif = True
+            active_session.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except:
+            raise NotFound('User telegram session not found!')
+        
 
     def disable_notif(self, request):
         '''POST: Disables the incoming notification settings for a particular chat_id.'''   
         seri = self.serializer_class(data=request.data)
-        # Checking if the request data is valid
-        if seri.is_valid():
-            chat_id = int(seri.validated_data['chat_id'])
-            # Checking if an active session exists for that chat_id
-            try:
-                active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
-                # Enable allow_notif
-                active_session.allow_notif = False
-                active_session.save()
-                return Response(data=None, status=status.HTTP_200_OK)
-            except:
-                raise NotFound('User telegram session not found!')
-        raise ValidationError('Chat id must be passed in body!')
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        chat_id = int(seri.validated_data['chat_id'])
+        # Checking if an active session exists for that chat_id
+        try:
+            active_session = TelegramActiveSessions.objects.get(chat_id=chat_id)
+            # Enable allow_notif
+            active_session.allow_notif = False
+            active_session.save()
+            return Response(data=None, status=status.HTTP_200_OK)
+        except:
+            raise NotFound('User telegram session not found!')
+        
 
 class AdminQuestionAnswerView(ViewSet):
     '''This is a view for admins to manage question answers.'''
@@ -667,16 +689,18 @@ class AdminQuestionAnswerView(ViewSet):
     def answer_question(self, request, q_id=None):
         '''POST: create a new answer for the quesiton.'''
         seri = self.answer_serializer(data=request.data)
-        # Checking if the question exists
-        if seri.is_valid():
-            question = QuestionAnswer.objects.get(pk=q_id)
-            answer = seri.validated_data.get('answer')
-            # Update the question    
-            question.answer = answer
-            question.save()
-            seri = self.question_answer_serializer(question)
-            return Response(data=seri.data, status=status.HTTP_200_OK)
-        raise ValidationError(detail=seri.errors)
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
+        
+        question = QuestionAnswer.objects.get(pk=q_id)
+        answer = seri.validated_data.get('answer')
+        # Update the question    
+        question.answer = answer
+        question.save()
+        seri = self.question_answer_serializer(question)
+        return Response(data=seri.data, status=status.HTTP_200_OK)
+        
 
     @transaction.atomic
     def update_question_message(self, request, q_id):
@@ -697,48 +721,52 @@ class AdminQuestionAnswerView(ViewSet):
         So, we get the chat_ids and message_ids to add them to the question data to identify them later.
         '''
         seri = self.question_update_message_serializer(data=request.data, many=True)
-        # Checking if the request data is valid
-        if seri.is_valid():
-            # Checking if the question exists
-            try:
-                question = QuestionAnswer.objects.get(pk=q_id)
+        # if json is not valid raise error
+        if not seri.is_valid():
+            raise ValidationError(detail='The data is not valid!')
 
-                # Update redis data
-                for data in seri.validated_data:
-                    chat_id = str(data['chat_id'])
-                    message_id = str(data['message_id'])
+        # Checking if the question exists
+        try:
+            QuestionAnswer.objects.get(pk=q_id)
 
-                    # Check if the chat_id is added before and get all questions if exist
-                    all_questions = redis_instance.get(chat_id)
-                    all_questions = '' if all_questions is None else all_questions.decode('utf-8')    
-                        
-                    key = f"{chat_id};{q_id}"
-                    # Add message_id if not exists
-                    if not message_id in all_questions:
-                        message_id_list = redis_instance.get(key)
-                        message_id_list = '' if  message_id_list is None else message_id_list.decode('utf-8')
-                        redis_instance.set(chat_id, f"{all_questions}{message_id}|")
-                        redis_instance.set(key, f"{message_id_list}{message_id}|")
+            # Update redis data
+            for data in seri.validated_data:
+                chat_id = str(data['chat_id'])
+                message_id = str(data['message_id'])
 
-                    # Add question to chat_id|message_id key
-                    redis_instance.set(f"{chat_id}|{message_id}", f'{q_id}')
+                # Check if the chat_id is added before and get all questions if exist
+                all_questions = redis_instance.get(chat_id)
+                all_questions = '' if all_questions is None else all_questions.decode('utf-8')    
+                    
+                key = f"{chat_id};{q_id}"
+                # Add message_id if not exists
+                if not message_id in all_questions:
+                    message_id_list = redis_instance.get(key)
+                    message_id_list = '' if  message_id_list is None else message_id_list.decode('utf-8')
+                    redis_instance.set(chat_id, f"{all_questions}{message_id}|")
+                    redis_instance.set(key, f"{message_id_list}{message_id}|")
 
-                return Response(data=None, status=status.HTTP_200_OK)
+                # Add question to chat_id|message_id key
+                redis_instance.set(f"{chat_id}|{message_id}", f'{q_id}')
 
-            except QuestionAnswer.DoesNotExist:
-                raise NotFound(detail=f'Question(id = {q_id}) not found!')
+            return Response(data=None, status=status.HTTP_200_OK)
 
-        raise ValidationError(detail=seri.errors)
+        except QuestionAnswer.DoesNotExist:
+            raise NotFound(detail=f'Question(id = {q_id}) not found!')
+
 
     def get_questions_in_chat(self, request):
+        # checking if chat_id is given
         chat_id = request.GET.get('chat_id', None)
         if chat_id is None:
             raise ValidationError('Chat id must be sent');
 
+        # Getting messages id list in chat
         message_id_list = redis_instance.get(chat_id)
         if message_id_list is None:
             return Response(data=dict(), status=status.HTTP_200_OK)
         
+        # Sending message_id question_id pairs as a json
         output = dict()
         message_id_list = message_id_list.decode('utf-8').split('|')
         for i in range(len(message_id_list) - 1):
@@ -753,6 +781,13 @@ class MemberQuestionAnswerView(ViewSet):
     serializer_class = QuestionAnswerSerializer
 
     def get_question_answer(self, request, q_id):
+        # checking if q_id is given
+        q_id = request.GET.get('chat_id', None)
+        if q_id is None:
+            raise ValidationError('q_id must be sent')
+        
+        q_id = int(q_id)
+        # Checking if question answer exists
         try:
             question_answer = QuestionAnswer.objects.get(pk=q_id)
             seri =  self.serializer_class(question_answer)
