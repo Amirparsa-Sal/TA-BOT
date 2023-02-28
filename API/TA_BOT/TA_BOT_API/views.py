@@ -20,6 +20,7 @@ from .serializers import AnswerSerializer, ChatIdMessageIdSerializer, GradeSeria
 from .models import AuthData, Category, Grade, QuestionAnswer, TelegramActiveSessions, Resource, HomeWork
 from .exceptions import UserAlreadyExistsException,NoOtpException,InvalidSecretKey, OtpMismatchException, AuthDataNotFoundException
 from .utils import send_email
+from .permissions import IsSuperUser
 
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.settings import api_settings
@@ -42,7 +43,7 @@ class BotMetaDataView(ViewSet):
         The data is mostly about users sessions.
     '''
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsSuperUser]
 
     def get_last_login(self, request):
         '''
@@ -120,7 +121,6 @@ class CustomAuthToken(ObtainAuthToken):
 
 class AuthView(ViewSet):
     '''This is a view for authentication stuff.'''
-    authentication_classes = [TokenAuthentication]
     
     def register_user(self, request):
         '''POST: Sends the otp password to the given email if the email is not registered.'''
