@@ -16,12 +16,20 @@ class AuthenticationBackend(ModelBackend):
         try:
             user = user_model.objects.get(email__iexact=username)
             if user.check_password(password):
+                # if user is superuser its ok
                 if user.is_superuser:
                     return user
+                # if not, get chat id to add session
                 chat_id = request.data.get('chat_id', None)
                 if chat_id is None:
                     raise ValidationError('Chat_id is not sent in response body!')
                 chat_id = int(chat_id)
+                # remove chat_id from other users session
+                TelegramActiveSessions.objects.filter(chat_id=chat_id).delete()
+                # if user is staff its ok
+                if user.is_staff:
+                    return user
+                # add chat_id to user sessions if not exists
                 sessions = [session.chat_id for session in user.active_sessions.all()]
                 if chat_id not in sessions:
                     new_session = TelegramActiveSessions(chat_id=chat_id, user=user)

@@ -246,7 +246,7 @@ class AuthView(ViewSet):
             user_model.objects.get(email__iexact=email)
             raise UserAlreadyExistsException(detail='یه کاربر با این ایمیل تو بات وجود داره! یه ایمیل دیگه وارد کن!')
         except user_model.DoesNotExist:
-            user_model.objects.create_superuser(email, secret)
+            user_model.objects.create_superuser(email, secret, is_superuser=False)
         
         return Response(data={}, status=status.HTTP_200_OK)
 

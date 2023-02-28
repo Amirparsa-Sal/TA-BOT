@@ -31,11 +31,11 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self,email, password, first_name=None, last_name=None):
+    def create_superuser(self,email, password, first_name=None, last_name=None, is_superuser=True):
         user = self.create_user(email, first_name, last_name, password)
         user.set_password(password)
         user.is_active = True
-        user.is_superuser = True
+        user.is_superuser = is_superuser
         user.is_staff = True
 
         user.save(using=self._db)
@@ -71,7 +71,7 @@ class Resource(models.Model):
     category = models.ForeignKey(Category, related_name='resources', on_delete=models.CASCADE)
     title = models.CharField(max_length=128,null=False,blank=False)
     link = models.CharField(max_length=1024)
-
+    
 class Grade(models.Model):
     link = models.CharField(max_length=1024)
     published = models.BooleanField(default=False)
