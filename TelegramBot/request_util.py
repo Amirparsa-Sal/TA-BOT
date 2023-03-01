@@ -18,7 +18,8 @@ class ApiUrls(Enum):
     ###### Auth Urls
     AUTH_BASE = BASE_API_URL + 'auth/'
     SEND_OTP = AUTH_BASE + 'send-otp/'
-    ACTIVATE_ACCOUNT = AUTH_BASE + 'activate-account/'
+    VERIFY_OTP = AUTH_BASE + 'verify-otp/'
+    SET_PASSWORD = AUTH_BASE + 'set-password/'
     REGISTER_ADMIN = AUTH_BASE + 'register-admin/'
     LOGIN = AUTH_BASE + 'login/'
     LOGOUT = AUTH_BASE + 'logout/'

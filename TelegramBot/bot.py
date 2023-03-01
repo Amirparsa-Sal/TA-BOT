@@ -1,5 +1,5 @@
 import telegram
-from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
+from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters
 import logging
 import environ
 import re
@@ -28,7 +28,7 @@ bot = telegram.Bot(TOKEN)
 
 # Defining states
 MEMBER_LOGGED_IN, ADMIN_LOGGED_IN, NOT_LOGGED_IN, \
-REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWORD, \
+REGISTER_ENTER_EMAIL, REGISTER_ENTER_OTP, REGISTER_ENTER_PASSWORD, LOGIN_ENTER_EMAIL, LOGIN_ENTER_PASSWORD, \
 REGISTER_ADMIN_ENTER_EMAIL, REGISTER_ADMIN_ENTER_SECRET, \
 ADMIN_HOMEWORKS_MAIN, ADMIN_MANAGE_HOMEWORKS, ADMIN_EACH_HOMEWORK, ADMIN_HOMEWORKS_TITLE, ADMIN_HOMEWORKS_FILE, ADMIN_HOMEWORKS_DUE_DATE,\
 ADMIN_UPDATE_GRADE_ENTER_LINK, \
@@ -38,13 +38,15 @@ ADMIN_INCOMIG_NOTIFS, ADMIN_SEND_NOTIF, \
 ADMIN_CONFIRMATION_STATE, \
 ADMIN_QUESTIONS, ADMIN_EACH_QUESTION, \
 MEMBER_GET_CATEGORIES, MEMBER_GET_HOMEWORKS, MEMBER_GET_HOMEWORKS_GRADE, MEMBER_ASK_QUESTION, \
-MEMBER_QUESTIONS_MAIN, MEMBER_MY_QUESTIONS = range(33)
+MEMBER_QUESTIONS_MAIN, MEMBER_MY_QUESTIONS = range(34)
 
 # REGEX
 SIMPLE_EMAIL_REGEX = '^[^@\s]+@[^@\s]+\.[^@\s]+$'
 UNI_EMAIL_REGEX = env('UNI_EMAIL_REGEX', default='^[A-Za-z0-9._%+-]+@aut\.ac\.ir')
 OTP_REGEX = '^[0-9]{5}'
 URL_REGEX = "(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})"
+PASSWORD_REGEX = "(?=.*?[A-Z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,4096}"
+
 
 def start(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Logout if needed
@@ -283,10 +285,11 @@ def register_enter_otp(update: telegram.Update, context: telegram.ext.CallbackCo
     if re.fullmatch(OTP_REGEX, update.message.text):
         email = context.chat_data['email']
         #Check the otp correctness given the email and otp
-        response, status = post(ApiUrls.ACTIVATE_ACCOUNT.value, email=email, otp=update.message.text)
+        response, status = post(ApiUrls.VERIFY_OTP.value, email=email, otp=update.message.text)
         if status == 200:
-            update.message.reply_text(text=REGISTER_COMPLETED_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
-            return NOT_LOGGED_IN
+            context.chat_data['digest'] = response['digest']
+            update.message.reply_text(text=REGISTER_SET_PASSWORD_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
+            return REGISTER_ENTER_PASSWORD
         elif status == 400:
             update.message.reply_text(text=response['detail'], reply_markup=CANCEL_KEYBOARD)
             return REGISTER_ENTER_OTP
@@ -294,6 +297,25 @@ def register_enter_otp(update: telegram.Update, context: telegram.ext.CallbackCo
         return REGISTER_ENTER_OTP
     update.message.reply_text(text=NOT_CORRECT_OTP_FORMAT_MESSAGE, reply_markup=CANCEL_KEYBOARD)
     return REGISTER_ENTER_OTP
+
+def register_set_password(update: telegram.Update, context: telegram.ext.CallbackContext):
+    # Check if the password is valid
+    if re.fullmatch(PASSWORD_REGEX, update.message.text):
+        email = context.chat_data['email']
+        digest = context.chat_data['digest']
+        #Call set-password API
+        response, status = post(ApiUrls.SET_PASSWORD.value, email=email, digest=digest, password=update.message.text)
+        if status == 200:
+            update.message.reply_text(text=REGISTER_COMPLETED_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
+            return NOT_LOGGED_IN
+        elif status == 400:
+            update.message.reply_text(text=response['detail'], reply_markup=CANCEL_KEYBOARD)
+            return REGISTER_ENTER_PASSWORD
+        update.message.reply_text(text=STH_WENT_WRONG_MESSAGE, reply_markup=CANCEL_KEYBOARD)
+        return REGISTER_ENTER_PASSWORD
+    update.message.reply_text(text=NOT_CORRECT_PASSWORD_FORMAT_MESSAGE, reply_markup=CANCEL_KEYBOARD)
+    return REGISTER_ENTER_PASSWORD
+
 
 def login_enter_email(update: telegram.Update, context: telegram.ext.CallbackContext):
     # Checking if the email is valid
@@ -1133,6 +1155,7 @@ conv_handler = ConversationHandler(
             # # REGISTER STATES
             REGISTER_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), register_enter_email)],
             REGISTER_ENTER_OTP: [MessageHandler((Filters.text & ~ Filters.command), register_enter_otp)],
+            REGISTER_ENTER_PASSWORD: [MessageHandler((Filters.text & ~ Filters.command), register_set_password)],
             
             # LOGIN STATES
             LOGIN_ENTER_EMAIL: [MessageHandler((Filters.text & ~ Filters.command), login_enter_email)],
