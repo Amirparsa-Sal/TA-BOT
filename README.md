@@ -52,7 +52,7 @@ This project is an open source Telegram bot which can be used as a teaching assi
 
   Before using the bot, you can upload your students data containing their email, student_id, first name, last name and password to authenticate them. Students then can register using that information. 
 
-  They must send their own email in telegram, then the bot sends a one time password to their email (if they have entered a valid email) and after entering that password, the account is created using the predefined passwords which you have uploaded in admin panel to use them as an authentication mean. 
+  They must send their own email in telegram, then the bot sends a one time password to their email (if they have entered a valid email) and after entering that password, the bot asks them to set their password. After entering the password the registeration is complete.
 
   Obviously, there is a login section in which the students can login to their account using an email and a password. Each student has its own account and he/she can login to the account with multiple devices at the same time.
 
