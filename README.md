@@ -106,6 +106,8 @@ touch .env
 You must specify the following items:
 
 ```bash
+SERVER_DOMAIN=your_domain #Domain of your server. Used to access django admin panel.
+
 POSTGRES_DB=you_db_name # The postgres DB you want to create
 POSTGRES_USER=your_postgres_user # The postgres user you want to create
 POSTGRES_PASSWORD=your_postgres_password # The password for postgres user
