@@ -122,6 +122,8 @@ class CustomAuthToken(ObtainAuthToken):
 class AuthView(ViewSet):
     '''This is a view for authentication stuff.'''
     
+    authentication_classes = [TokenAuthentication] #This is for logout API
+    
     def register_user(self, request):
         '''POST: Sends the otp password to the given email if the email is not registered.'''
         seri = UserRegisterSerializer(data=request.data)
