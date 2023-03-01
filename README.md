@@ -106,11 +106,16 @@ touch .env
 You must specify the following items:
 
 ```bash
-EMAIL_HOST=smtp.gmail.com #Your SMTP host
-EMAIL_HOST_USER=example@gmail.com #Your SMTP account email
-EMAIL_HOST_PASSWORD=example_password #Your SMTP account password
+POSTGRES_DB=you_db_name # The postgres DB you want to create
+POSTGRES_USER=your_postgres_user # The postgres user you want to create
+POSTGRES_PASSWORD=your_postgres_password # The password for postgres user
 
-SECRET_KEY=example_secret #Secret key of API (must be secure enough)
+EMAIL_HOST=smtp.gmail.com #Your SMTP host
+EMAIL_SENDER=example@gmail.com #Your SMTP account email
+EMAIL_PASSWORD=your_password #Your SMTP account password
+EMAIL_PORT=465 # SMTP Port
+
+SECRET_KEY=example_secret #Secret key for bot admins (must be strong enough)
 
 DJANGO_SUPERUSER_EMAIL=example@gmail.com #The superuser email for API
 DJANGO_SUPERUSER_PASSWORD=example_password #The superuser password for API
