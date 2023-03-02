@@ -288,7 +288,7 @@ def register_enter_otp(update: telegram.Update, context: telegram.ext.CallbackCo
         response, status = post(ApiUrls.VERIFY_OTP.value, email=email, otp=update.message.text)
         if status == 200:
             context.chat_data['digest'] = response['digest']
-            update.message.reply_text(text=REGISTER_SET_PASSWORD_MESSAGE, reply_markup=NOT_LOGGED_IN_KEYBOARD)
+            update.message.reply_text(text=REGISTER_SET_PASSWORD_MESSAGE, reply_markup=CANCEL_KEYBOARD)
             return REGISTER_ENTER_PASSWORD
         elif status == 400:
             update.message.reply_text(text=response['detail'], reply_markup=CANCEL_KEYBOARD)
