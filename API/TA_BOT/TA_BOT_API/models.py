@@ -7,7 +7,6 @@ from django.db.models.base import Model
 
 class AuthData(models.Model):
 
-    password = models.CharField(max_length=128, unique=True, null=False)
     student_id = models.CharField(max_length=16, null=False)
     email = models.EmailField(unique=True, null=False)
     first_name = models.CharField(max_length=255)
@@ -26,7 +25,8 @@ class UserManager(BaseUserManager):
 
         email = self.normalize_email(email)
         user = self.model(email=email,first_name=first_name, last_name=last_name, student_id=student_id)
-        user.password = password
+        user.set_password(password)
+        user.is_active = False
         
         user.save(using=self._db)
         return user

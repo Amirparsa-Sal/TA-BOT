@@ -123,7 +123,7 @@ class AuthView(ViewSet):
     '''This is a view for authentication stuff.'''
     
     authentication_classes = [TokenAuthentication] #This is for logout API
-    
+
     def register_user(self, request):
         '''POST: Sends the otp password to the given email if the email is not registered.'''
         seri = UserRegisterSerializer(data=request.data)
@@ -146,7 +146,7 @@ class AuthView(ViewSet):
                 # Create a new user if user does not exist
                 try:
                     auth_data = AuthData.objects.get(email__iexact=email)
-                    user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, auth_data.password, student_id=auth_data.student_id)
+                    user_model.objects.create_user(email, auth_data.first_name, auth_data.last_name, password=settings.SECRET_KEY, student_id=auth_data.student_id)
                 except AuthData.DoesNotExist:
                     raise AuthDataNotFoundException(detail='اطلاعات مربوط به این ایمیل در بات ثبت نشده! لطفا دوباره ایمیل رو وارد کن!')
         
